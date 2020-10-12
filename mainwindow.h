@@ -24,6 +24,8 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void dbg(QString data);
+    void dbg(QStringList data);
 
 private:
     Ui::MainWindow *ui;
@@ -31,6 +33,8 @@ private:
     bool checkNetSdk();
     bool installSdk();
     bool installLyraCli();
+    bool installSsl();
+    bool installDotNetSdkForSsl();
     void setWinTitle();
     bool getConfig(QString name, QString &response);
     bool setConfig(QString name, QString data);
@@ -38,7 +42,7 @@ private:
     bool saveConfig();
     bool createWallet(QString name, QString pass);
     bool recoverWallet(QString name, QString key, QString pass);
-    bool openWallet(QString wallet, QString pass);
+    bool openWallet(QString name, QString pass);
     bool sendCoins(QString id, double value);
     bool readHistory();
     bool syncAccount();
@@ -65,7 +69,7 @@ private:
     QProgressDialog *loadWalletProgress;
 
 private slots:
-    void loadWalletAtStart();
+    void loadAtStart();
 
     void on_receivePushButton_clicked();
     void on_sendPushButton_clicked();

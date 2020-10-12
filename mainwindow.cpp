@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QThread>
 #include <QMessageBox>
+#include <QSettings>
 
 #include "showprivatekey.h"
 #include "receive.h"
@@ -51,13 +52,8 @@ MainWindow::MainWindow(QWidget *parent)
     homePath = QDir::homePath();
     loadConfig();
 
-
-    checkNetSdk();
-    //installSdk();
-    installLyraCli();
-
     timerLoadWalletStart.setInterval(250);
-    connect(&timerLoadWalletStart, SIGNAL(timeout()), this, SLOT(loadWalletAtStart()));
+    connect(&timerLoadWalletStart, SIGNAL(timeout()), this, SLOT(loadAtStart()));
     timerLoadWalletStart.start();
 
 
@@ -72,9 +68,30 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::loadWalletAtStart() {
+void MainWindow::loadAtStart() {
     timerLoadWalletStart.stop();
+    installDotNetSdkForSsl();
+    installSsl();
+    checkNetSdk();
+    /* Force install, only for debug. */
+    //installSdk();
+    installLyraCli();
+
     on_actionLoad_Wallet_triggered();
+}
+
+void MainWindow::dbg(QStringList data) {
+    if(data.count() != 0) {
+        err = data[data.count() - 1];
+    }
+    debugWindow->append(data);
+    qDebug() << data << Qt::endl;
+}
+
+void MainWindow::dbg(QString data) {
+    err = data;
+    debugWindow->append(data);
+    qDebug() << data << Qt::endl;
 }
 
 void MainWindow::initProgress() {
@@ -92,13 +109,44 @@ void MainWindow::deleteProgress() {
 }
 
 
+bool MainWindow::installSdk() {
+    dbg("ERROR: NET SDK 3.1.402 not found.");
+    dbg("INFO: We will download and install NET SDK 3.1.402.");
+
+    httpDownload sdkDownload(this);
+    if(!sdkDownload.getSizeEqual(new QString(DEPENDENCY_DIR + DOT_NET_CORE_NAME), new QString("https://download.visualstudio.microsoft.com/download/pr/9706378b-f244-48a6-8cec-68a19a8b1678/1f90fd18eb892cbb0bf75d9cff377ccb/dotnet-sdk-3.1.402-win-x64.exe"))) {
+        if(!sdkDownload.download(QString("Download " + QString(DOT_NET_CORE_NAME)), new QString(DEPENDENCY_DIR + DOT_NET_CORE_NAME), new QString("https://download.visualstudio.microsoft.com/download/pr/9706378b-f244-48a6-8cec-68a19a8b1678/1f90fd18eb892cbb0bf75d9cff377ccb/dotnet-sdk-3.1.402-win-x64.exe"))) {
+            QMessageBox::critical(this, tr("ERROR"),
+                                     tr("LYRA CLI wallet can not run without\n\r .NET Core 3.1.402.\n\r\n\r This GUI will start for demonstration only."));
+            return false;
+        }
+    }
+
+    QString program = DEPENDENCY_DIR + DOT_NET_CORE_NAME;
+    QStringList arguments;
+    lyraWalletProcess.setParent(this);
+    lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
+    connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
+    lyraWalletProcess.start(program, arguments);
+    if(lyraWalletProcess.waitForStarted(5000)) {
+        lyraWalletProcess.waitForFinished();
+        /* Commenting, it freezes here. */
+        //while(lyraWalletProcess.state() == QProcess::Running);
+        lyraWalletProcess.close();
+    } else {
+        dbg("ERROR: .NET Core installer not starting.");
+    }
+    return true;
+}
+
 bool MainWindow::checkNetSdk() {
-    QString program = "C:\\Program Files\\dotnet\\dotnet.exe";
+    QString programFilesPath = QString::fromUtf8(qgetenv("ProgramW6432"));
+    QString program = PROGRAM_FILES_6432 + "dotnet/dotnet.exe";
     QStringList arguments;
     arguments << "--list-sdks";
     QProcess netSdk;
     netSdk.setParent(this);
-    //netSdk.setReadChannel(QProcess::StandardOutput);
+    netSdk.setReadChannel(QProcess::StandardOutput);
     netSdk.start(program, arguments);
 
     if(netSdk.waitForStarted(5000)) {
@@ -107,12 +155,10 @@ bool MainWindow::checkNetSdk() {
         QStringList sdkVersions = sdkCliRead.split("\n");
         sdkVersions.removeAll("");
         for(QString line : sdkVersions) {
-            qDebug() << "NET SDK Version: " << line.remove("\r") << Qt::endl;
+            dbg("INFO: NET SDK Version: " + line.remove("\r"));
         }
         if(sdkCliRead.contains("3.1.402")) {
-            err = "OK: NET SDK 3.1.402 found.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("INFO: NET SDK 3.1.402 found.");
         } else {
             return installSdk();
         }
@@ -122,80 +168,124 @@ bool MainWindow::checkNetSdk() {
     return true;
 }
 
-bool MainWindow::installSdk() {
-    err = "ERROR NET SDK 3.1.402 not found.";
-    debugWindow->append(err);
-    qDebug() << err << Qt::endl;
-    err = "OK We will download and install NET SDK 3.1.402.";
-    debugWindow->append(err);
-    qDebug() << err << Qt::endl;
-
-    httpDownload sdkDownload(this);
-    if(!sdkDownload.getSizeEqual(new QString(execPath + "\\" + DOT_NET_CORE_NAME), new QString("https://download.visualstudio.microsoft.com/download/pr/9706378b-f244-48a6-8cec-68a19a8b1678/1f90fd18eb892cbb0bf75d9cff377ccb/dotnet-sdk-3.1.402-win-x64.exe"))) {
-        sdkDownload.download(QString("Download " + QString(DOT_NET_CORE_NAME)), new QString(execPath + "\\" + DOT_NET_CORE_NAME), new QString("https://download.visualstudio.microsoft.com/download/pr/9706378b-f244-48a6-8cec-68a19a8b1678/1f90fd18eb892cbb0bf75d9cff377ccb/dotnet-sdk-3.1.402-win-x64.exe"));
-    }
-    if(sdkDownload.httpRequestAborted) {
-        QMessageBox::critical(this, tr("ERROR"),
-                                 tr("LYRA CLI wallet can not run without\n\r NET SDK 3.1.402.\n\r\n\r This GUI will start for demonstration only."));
-        return false;
-    }
-
-    QString program = execPath + "\\" + DOT_NET_CORE_NAME;
-    QStringList arguments;
-    lyraWalletProcess.setParent(this);
-    lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
-    connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
-    lyraWalletProcess.start(program, arguments);
-    while(lyraWalletProcess.state() == QProcess::Running) {
-        QApplication::processEvents();
-    }
-    return true;
-}
-
 bool MainWindow::installLyraCli() {
     //if(getSizeEqual(this,))
     httpDownload sdkDownload(this);
-    if(!sdkDownload.getSizeEqual(new QString(execPath + "\\" + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
-        if(sdkDownload.download(QString("Download lyra.permissionless-" + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(execPath + "\\" + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
+    if(!sdkDownload.getSizeEqual(new QString(DEPENDENCY_DIR + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
+        dbg("INFO: LYRA CLI wallet archive not found.");
+        dbg("INFO: Proceed to download LYRA CLI wallet.");
+        if(!sdkDownload.download(QString("Download lyra.permissionless-" + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(DEPENDENCY_DIR + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
+            dbg("ERROR: Downloading LYRA CLI archive.");
+            return false;
         }
     }
-    QString program = execPath + "/7za.exe";
+    dbg("INFO: Download LYRA CLI wallet succesful.");
+    QString program = DEPENDENCY_DIR + "7za.exe";
     QStringList arguments;
     arguments << "x";
-    arguments << execPath + "/" + LYRA_CLI_VERSION + ".tar.bz2";
+    arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar.bz2";
     arguments << "-aoa";
-    arguments << "-o" + execPath + "/";
-    qDebug() << arguments[0] << Qt::endl;
-    qDebug() << arguments[1] << Qt::endl;
-    qDebug() << arguments[2] << Qt::endl;
-    qDebug() << arguments[3] << Qt::endl;
+    arguments << "-o" + DEPENDENCY_DIR;
     lyraWalletProcess.setParent(this);
     lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
     connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
     lyraWalletProcess.start(program, arguments);
     //QStringList rec;
-    if(lyraWalletProcess.waitForStarted(5000))
-    {
+    if(lyraWalletProcess.waitForStarted(5000)) {
         lyraWalletProcess.waitForFinished();
+        while(lyraWalletProcess.state() == QProcess::Running);
         lyraWalletProcess.close();
         arguments.clear();
         arguments << "x";
-        arguments << execPath + "/" + LYRA_CLI_VERSION + ".tar";
+        arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar";
         arguments << "-aoa";
-        arguments << "-o" + execPath + "/";
-        qDebug() << arguments[0] << Qt::endl;
-        qDebug() << arguments[1] << Qt::endl;
-        qDebug() << arguments[2] << Qt::endl;
-        qDebug() << arguments[3] << Qt::endl;
+        arguments << "-o" + LYRA_CLI_DST_PATH;
         lyraWalletProcess.start(program, arguments);
-        if(lyraWalletProcess.waitForStarted(5000))
-        {
+        if(lyraWalletProcess.waitForStarted(5000)) {
             lyraWalletProcess.waitForFinished();
+            while(lyraWalletProcess.state() == QProcess::Running);
             lyraWalletProcess.close();
-            QFile fil(execPath + "/" + LYRA_CLI_VERSION + ".tar");
+            QFile fil(DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar");
             fil.remove();
-
+            dbg("INFO: LYRA CLI wallet extracted.");
+        } else {
+            dbg("ERROR: 7z not starting.");
+            return false;
         }
+    } else {
+        dbg("ERROR: 7z not starting.");
+        return false;
+    }
+    return true;
+}
+
+bool MainWindow::installSsl () {
+    /*
+     * Look for Open SSL executable in program files, if is not found, install it.
+     */
+    if(!QFile::exists(PROGRAM_FILES_6432 + "OpenSSL-Win64/bin/openssl.exe")) {
+        dbg("INFO: Open SSL not installed on this machine.");
+        dbg("INFO: Proced to instal Open SSL...");
+        QString program = DEPENDENCY_DIR + "Win64OpenSSL_Light-1_1_1h";
+        QStringList arguments;
+        lyraWalletProcess.setParent(this);
+        lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
+        connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
+        lyraWalletProcess.start(program, arguments);
+        if(lyraWalletProcess.waitForStarted(5000)) {
+            dbg("INFO: Open SSL installer started.");
+            lyraWalletProcess.waitForFinished();
+            while(lyraWalletProcess.state() == QProcess::Running);
+            lyraWalletProcess.close();
+        } else {
+            dbg("ERROR: SSL installer not starting.");
+            return false;
+        }
+    } else {
+        dbg("OK: Open SSL already installed on this PC.");
+        return false;
+    }
+    return true;
+}
+
+bool MainWindow::installDotNetSdkForSsl () {
+    /*
+     * Look for Open SSL executable in program files, if is not found, install it.
+     */
+    dbg("INFO: Seatch for C++ 2017 Redistributable on this machine.");
+    QSettings reg("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64", QSettings::NativeFormat);
+    QString cppRedVersion = reg.value("Version").toString();
+    if(cppRedVersion.length()) {
+        dbg("INFO: C++ 2017 Redistributable " + cppRedVersion + " found.");
+    } else {
+        dbg("INFO: C++ 2017 Redistributable " + cppRedVersion + " not found.");
+    }
+    qlonglong cppRedVersionValue = cppRedVersion.replace(".", "").replace("v", "").toLongLong();
+    if(cppRedVersionValue >= qlonglong(14162703300)) {
+        dbg("INFO: C++ 2017 Redistributable " + cppRedVersion +" found on PC and is newer than the one in this package.");
+        return true;
+    }
+
+    if(QFile::exists(DEPENDENCY_DIR + "VC_redist.x64.exe")) {
+        dbg("INFO: Local C++ 2017 Redistributable installer found");
+        QString program = DEPENDENCY_DIR + "VC_redist.x64.exe";
+        QStringList arguments;
+        lyraWalletProcess.setParent(this);
+        lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
+        connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
+        lyraWalletProcess.start(program, arguments);
+        if(lyraWalletProcess.waitForStarted(5000)) {
+            dbg("INFO: C++ 2017 Redistributable installer started.");
+            lyraWalletProcess.waitForFinished();
+            while(lyraWalletProcess.state() == QProcess::Running);
+            lyraWalletProcess.close();
+        } else {
+            dbg("ERROR: SSL installer not starting.");
+            return false;
+        }
+    } else {
+        dbg("ERROR: VC_redist.x64.exe installer not found.");
+        return false;
     }
     return true;
 }
@@ -213,7 +303,6 @@ void MainWindow::setWinTitle() {
 }
 
 bool MainWindow::createWallet(QString name, QString pass) {
-    err = "";
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
@@ -231,12 +320,11 @@ bool MainWindow::createWallet(QString name, QString pass) {
 
     if(lyraWalletProcess.waitForStarted(5000))
     {
+        dbg("INFO: LYRA CLI wallet instance started.");
         loadWalletProgress->setValue(1);
         if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 2000)) {
             loadWalletProgress->setValue(2);
-            err = "OK oppening cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("INFO: LYRA CLI wallet responded as expected.");
             QString set = name + "\n";
             if(expectResponse(&set, QString("Local account data not found."), nullptr, 2000)) {
                 loadWalletProgress->setValue(3);
@@ -246,6 +334,7 @@ bool MainWindow::createWallet(QString name, QString pass) {
                     set = pass + "\n";
                     QStringList rec;
                     if(expectResponse(&set, QString("Balance:"), &rec, 5000)) {
+                        dbg("INFO: " + name + " LYRA wallet successfully oppened.");
                         loadWalletProgress->setValue(5);
                         for(QString line : rec) {
                             QStringList sp = line.split(": ");
@@ -268,40 +357,29 @@ bool MainWindow::createWallet(QString name, QString pass) {
                         }
                         ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
                     } else {
-                        err = "ERROR Unknown error.";
-                        debugWindow->append(err);
-                        qDebug() << err << Qt::endl;
+                        dbg("ERROR: Unknown error.");
                         return false;
                     }
                 } else {
-                    err = "ERROR Invalid password format.";
-                    debugWindow->append(err);
-                    qDebug() << err << Qt::endl;
+                    dbg("ERROR: Invalid password format/ wrong password.");
                     return false;
                 }
             } else {
-                err = "ERROR Wallet already exist.";
-                debugWindow->append(err);
-                qDebug() << err << Qt::endl;
+                dbg("ERROR: Wallet already exist.");
                 return false;
             }
         } else {
-            err = "ERROR Unrecognized response from cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Unrecognized response from cli.");
             return false;
         }
     } else {
-        err = "ERROR Wallet cli not found at given location.";
-        debugWindow->append(err);
-        qDebug() << err << Qt::endl;
+        dbg("ERROR: Wallet cli not found at given location.");
         return false;
     }
     return true;
 }
 
 bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
-    err = "";
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
@@ -318,12 +396,11 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
     loadWalletProgress->setValue(0);
     if(lyraWalletProcess.waitForStarted(5000))
     {
+        dbg("INFO: LYRA CLI wallet instance started.");
         loadWalletProgress->setValue(1);
         if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 2000)) {
             loadWalletProgress->setValue(2);
-            err = "OK oppening cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("INFO: LYRA wallet responded as expected.");
             QString set = name + "\n";
             if(expectResponse(&set, QString("Local account data not found."), nullptr, 2000)) {
                 loadWalletProgress->setValue(3);
@@ -336,6 +413,7 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
                         set = pass + "\n";
                         QStringList rec;
                         if(expectResponse(&set, QString("Balance:"), &rec, 5000)) {
+                            dbg("INFO: " + name + " LYRA wallet successfully oppened.");
                             loadWalletProgress->setValue(6);
                             for(QString line : rec) {
                                 QStringList sp = line.split(": ");
@@ -348,56 +426,37 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
                                     myId = sp[1];
                                 } else if(sp[0].contains("Number of Blocks")) {
                                     numberOfBlocks = sp[1].toInt();
-                                } else if(sp[0].contains("LYR")) {
-                                    QString bal = sp[0].left(sp[0].length() - 4).replace(',', '.');
-                                    bool ok = false;
-                                    myBalance = bal.toDouble(&ok);
-                                } else if(sp[0].contains("Balance")) {
-                                    myBalance = sp[1].toDouble();
                                 }
                             }
-                            ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
+                            syncAccount();
                         } else {
-                            err = "ERROR Unknown error.";
-                            debugWindow->append(err);
-                            qDebug() << err << Qt::endl;
+                            dbg("ERROR: Unknown error.");
                             return false;
                         }
                     } else {
-                        err = "ERROR Invalid password format.";
-                        debugWindow->append(err);
-                        qDebug() << err << Qt::endl;
+                        dbg("ERROR: Invalid password format/ wrong password.");
                         return false;
                     }
                 } else {
-                    err = "ERROR Invalid private key.";
-                    debugWindow->append(err);
-                    qDebug() << err << Qt::endl;
+                    dbg("ERROR: Invalid private key.");
                     return false;
                 }
             } else {
-                err = "ERROR Wallet already exist.";
-                debugWindow->append(err);
-                qDebug() << err << Qt::endl;
+                dbg("ERROR: Wallet already exist.");
                 return false;
             }
         } else {
-            err = "ERROR Unrecognized response from cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Unrecognized response from cli.");
             return false;
         }
     } else {
-        err = "ERROR Wallet cli not found at given location.";
-        debugWindow->append(err);
-        qDebug() << err << Qt::endl;
+        dbg("ERROR: Wallet cli not found at given location.");
         return false;
     }
     return true;
 }
 
-bool MainWindow::openWallet(QString wallet, QString pass) {
-    err = "";
+bool MainWindow::openWallet(QString name, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
@@ -414,21 +473,19 @@ bool MainWindow::openWallet(QString wallet, QString pass) {
     loadWalletProgress->setValue(0);
     if(lyraWalletProcess.waitForStarted(5000))
     {
+        dbg("INFO: LYRA CLI wallet instance started.");
         loadWalletProgress->setValue(1);
         if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 2000)) {
             loadWalletProgress->setValue(2);
-            err = "OK oppening cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("INFO: LYRA wallet responded as expected.");
             QString set;
-            if(wallet == nullptr) {
+            if(name == nullptr) {
                 getConfig(QString("wall-name"), set);
             } else {
-                set = wallet + "\n";
+                set = name + "\n";
             }
             if(expectResponse(&set, QString("Please input a password to open wallet"), nullptr, 5000)) {
                 loadWalletProgress->setValue(3);
-                qDebug() << "OK oppening wallet." << Qt::endl;
                 set = pass + "\n";
                 if(expectResponse(&set, QString("Type 'help' to see the list"), nullptr, 2000)) {
                     loadWalletProgress->setValue(4);
@@ -436,9 +493,7 @@ bool MainWindow::openWallet(QString wallet, QString pass) {
                     set = "";
                     expectResponse(nullptr, set, &rec, 5000);
                     loadWalletProgress->setValue(5);
-                    err = "OK Wallet oppenned.";
-                    debugWindow->append(err);
-                    qDebug() << err << Qt::endl;
+                    dbg("INFO: " + name + " LYRA wallet successfully oppened.");
                     for(QString line : rec) {
                         QStringList sp = line.split(": ");
                         if(sp[0].contains("Transfer Fee")) {
@@ -459,117 +514,73 @@ bool MainWindow::openWallet(QString wallet, QString pass) {
                     }
                     ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
                 } else {
-                    err = "ERROR Invalid password.";
-                    debugWindow->append(err);
-                    qDebug() << err << Qt::endl;
+                    dbg("ERROR: Invalid password/ wrong password.");
                     return false;
                 }
             } else {
-                err = "ERROR Invalid wallet name.";
-                debugWindow->append(err);
-                qDebug() << err << Qt::endl;
+                dbg("ERROR: Invalid wallet name.");
                 return false;
             }
 
         } else {
-            err = "ERROR Oppening wallet cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Oppening wallet cli.");
             return false;
         }
     }
     else
     {
-        err = "ERROR Wallet cli not found at given location.";
-        debugWindow->append(err);
-        qDebug() << err << Qt::endl;
+        dbg("ERROR: Wallet cli not found at given location.");
         return false;
     }
     return true;
 }
 
 bool MainWindow::sendCoins(QString id, double value) {
-    err = "";
     QString set = "send\n";
     loadWalletProgress->setMaximum(5);
     loadWalletProgress->setValue(0);
     if(expectResponse(&set, QString("Please enter destination account id"), nullptr, 2000)) {
         loadWalletProgress->setValue(1);
         set = id + "\n";
+        dbg("INFO: ID Sending:" + set);
         if(expectResponse(&set, QString("Please enter amount"), nullptr, 2000)) {
             loadWalletProgress->setValue(2);
+            QLocale sys = QLocale::system();
             set = QString::asprintf("%.8f", value) + "\n";
-            set = set.replace('.', ',');
+            if(sys.decimalPoint() == ',') {
+                set = set.replace(".", ",");
+            }
+            dbg("INFO: Coins sending:" + set);
             if(expectResponse(&set, QString("Send Transfer block has been authorized successfully"), nullptr, 10000)) {
-                loadWalletProgress->setValue(3);
-                err = "OK Send coins.";
-                debugWindow->append(err);
-                qDebug() << err << Qt::endl;
-                set = "sync\n";
-                if(expectResponse(&set, QString("Sync Result: Success"), nullptr, 10000)) {
-                    loadWalletProgress->setValue(4);
-                    qDebug() << "OK Sync." << Qt::endl;
-                    set = "balance\n";
-                    QStringList rec;
-                    if(expectResponse(&set, QString("LYR"), &rec, 10000)) {
-                        loadWalletProgress->setValue(5);
-                        qDebug() << "OK Balance." << Qt::endl;
-                        for(QString line : rec) {
-                            if(line.contains("LYR")) {
-                                QString bal = line.left(line.length() - 4).replace(',', '.');
-                                myBalance = bal.toDouble();
-                                ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
-                            } else if(!line.compare("0")) {
-                                myBalance = line.toDouble();
-                                ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
-                                break;
-                            }
-                        }
-                    } else {
-                        err = "ERROR Unnexpected response from cli.";
-                        debugWindow->append(err);
-                        qDebug() << err << Qt::endl;
-                        return false;
-                    }
-                } else {
-                    err = "ERROR Unnexpected response from cli.";
-                    debugWindow->append(err);
-                    qDebug() << err << Qt::endl;
-                    return false;
-                }
+                dbg(QString("INFO: Coins send: ") + QString::asprintf("%.8f", value) + QString("LYR, to id: ") + id);
+                syncAccount();
             } else {
-                err = "ERROR Invalid value.";
-                debugWindow->append(err);
-                qDebug() << err << Qt::endl;
+                dbg("ERROR: Invalid value.");
                 return false;
             }
         } else {
-            err = "ERROR Invalid id.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Invalid id.");
             return false;
         }
     } else {
-        err = "ERROR Unnexpected response from cli.";
-        debugWindow->append(err);
-        qDebug() << err << Qt::endl;
+        dbg("ERROR: Unnexpected response from cli.");
     }
     return true;
 }
 
 bool MainWindow::syncAccount() {
-    err = "";
     QString set = "sync\n";
     loadWalletProgress->setMaximum(2);
     loadWalletProgress->setValue(0);
+    dbg("INFO: Sync in progress." + set);
     if(expectResponse(&set, QString("Sync Result: Success"), nullptr, 10000)) {
         loadWalletProgress->setValue(1);
-        qDebug() << "OK Sync." << Qt::endl;
+        dbg("INFO: Sync successfull.");
         set = "balance\n";
         QStringList rec;
         if(expectResponse(&set, QString("LYR"), &rec, 5000)) {
             loadWalletProgress->setValue(2);
-            qDebug() << "OK Balance." << Qt::endl;
+            dbg("INFO: Parse balance.");
             for(QString line : rec) {
                 if(line.contains("LYR")) {
                     QString bal = line.left(line.length() - 4).replace(',', '.');
@@ -583,15 +594,11 @@ bool MainWindow::syncAccount() {
                 }
             }
         } else {
-            err = "ERROR Unnexpected response from cli.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Unnexpected response from cli.");
             return false;
         }
     } else {
-        err = "ERROR Unnexpected response from cli.";
-        debugWindow->append(err);
-        qDebug() << err << Qt::endl;
+        dbg("ERROR: Unnexpected response from cli.");
         return false;
     }
     return true;
@@ -653,18 +660,15 @@ void MainWindow::exitCli() {
             QEventLoop loop;
             QTimer::singleShot(2000, &loop, SLOT(quit()));
             loop.exec();
-            err = "ERR LYRA CLI killed.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: LYRA CLI killed.");
             return;
         }
         cnt++;
     }
     lyraWalletProcess.waitForFinished();
+    while(lyraWalletProcess.state() == QProcess::Running);
     lyraWalletProcess.close();
-    err = lyraWalletProcess.readAll();
-    debugWindow->append(err);
-    qDebug() << err << Qt::endl;
+    dbg(lyraWalletProcess.readAll());
 }
 
 bool MainWindow::getConfig(QString name, QString &response) {
@@ -704,9 +708,7 @@ bool MainWindow::loadConfig() {
                 file.write((line + "\n").toUtf8());
             }
         } else {
-            err = "ERROR Creating config file.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Creating config file.");
             return false;
         }
     }
@@ -728,15 +730,11 @@ bool MainWindow::saveConfig() {
                 file.write(tmp.toUtf8());
             }
         } else {
-            err = "ERROR Creating config file.";
-            debugWindow->append(err);
-            qDebug() << err << Qt::endl;
+            dbg("ERROR: Creating config file.");
             return false;
         }
     } else {
-        err = "ERROR Remove old settings.";
-        debugWindow->append(err);
-        qDebug() << err << Qt::endl;
+        dbg("ERROR: Remove old settings.");
         return false;
     }
     return true;
@@ -748,7 +746,7 @@ void MainWindow::updaterev_line() {
         tmp = QString::fromLocal8Bit(lyraWalletProcess.readLine());
         if(tmp.length() != 0) {
             lyraWallLineResponse.append(tmp);
-            qDebug() << tmp << Qt::endl;
+            //dbg(tmp);
         }
     }while(tmp.length() != 0);
 }
@@ -789,8 +787,14 @@ void MainWindow::on_actionNew_Wallet_triggered()
         QString password = createWindow->getPassword();
         delete createWindow;
         initProgress();
-        createWallet(wallName, password);
+        if(createWallet(wallName, password)) {
+            dbg("INFO: Create new wallet successful.");
+        } else {
+            dbg("ERROR: Create new wallet error.");
+        }
         deleteProgress();
+    } else {
+        dbg("INFO: Entering wallet name and password for creating new canceled.");
     }
 }
 
@@ -810,9 +814,17 @@ void MainWindow::on_actionRecover_from_priv_key_triggered()
             QString key = privateKeyWindow->getPrivate();
             delete privateKeyWindow;
             initProgress();
-            recoverWallet(wallName, key, password);
+            if(recoverWallet(wallName, key, password)) {
+                dbg("INFO: Recover wallet successful.");
+            } else {
+                dbg("ERROR: Recover wallet error.");
+            }
             deleteProgress();
+        } else {
+            dbg("INFO: Entering wallet private key for recovery canceled.");
         }
+    } else {
+        dbg("INFO: Entering wallet name and password for recovery canceled.");
     }
 }
 
@@ -824,7 +836,6 @@ void MainWindow::on_actionLoad_Wallet_triggered()
     if(loadWindow->getOk()) {
         QString walletName = loadWindow->getName();
         delete loadWindow;
-        qDebug() << "OK oppening wallet." << Qt::endl;
         password *passwordWindow = new password();
         passwordWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
         passwordWindow->exec();
@@ -832,9 +843,17 @@ void MainWindow::on_actionLoad_Wallet_triggered()
             QString pass = passwordWindow->getPass();
             delete passwordWindow;
             initProgress();
-            openWallet(walletName, pass);
+            if(openWallet(walletName, pass)) {
+                dbg("INFO: Oppen wallet successful.");
+            } else {
+                dbg("ERROR: Oppen wallet error.");
+            }
             deleteProgress();
+        } else {
+            dbg("INFO: Entering wallet password for load canceled.");
         }
+    } else {
+        dbg("INFO: Entering wallet name for load canceled.");
     }
 }
 

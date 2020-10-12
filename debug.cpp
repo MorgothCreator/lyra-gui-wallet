@@ -1,4 +1,5 @@
 #include <QIcon>
+#include <QScrollBar>
 #include "ui_debug.h"
 #include "debug.h"
 #include "def.h"
@@ -21,6 +22,8 @@ void debug::append(QString text) {
     QString tmp = text.remove('\n').remove('\r');
     if(tmp.length() != 0) {
         ui->debugTextEdit->append(tmp + "\n");
+        QScrollBar *sb = ui->debugTextEdit->verticalScrollBar();
+        sb->setValue(sb->maximum());
     }
 }
 
@@ -29,5 +32,7 @@ void debug::append(QStringList text) {
     tmp.removeAll("");
     for(QString line : tmp) {
         ui->debugTextEdit->append(line.remove('\n').remove('\r') + "\n");
+        QScrollBar *sb = ui->debugTextEdit->verticalScrollBar();
+        sb->setValue(sb->maximum());
     }
 }

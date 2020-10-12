@@ -2,9 +2,8 @@ QT       += core gui
 QT       += network
 
 ICON = myapp.icns
-# win32:RC_FILE += winApp.rc
 RC_ICONS = your_icon.ico
-TARGET = lyra_win_wallet_v0.1.0
+TARGET = lyra-gui-wallet-win64-1.7.8.0
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11

@@ -41,6 +41,9 @@ bool httpDownload::download(QString progressTitle, QString *filePath, QString *s
         while(!finished) {
             QApplication::processEvents();
         }
+        if(!httpRequestAborted) {
+            return true;
+        }
     }
     return false;
 }
