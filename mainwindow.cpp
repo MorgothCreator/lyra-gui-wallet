@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QtCore>
 #include <QDebug>
 #include <QFile>
 #include <QThread>
@@ -39,6 +40,9 @@ MainWindow::MainWindow(QWidget *parent)
     numberOfBlocks = 0;
     myBalance = 0.0;
 
+    ui->networkWarningLabel->setText("Please Wait, Loading necessary components...");
+    ui->networkWarningLabel->setStyleSheet("font-weight: bold; color: red; font: bold 18px");
+
     if(ui->actionMainNet->isChecked()) {
         network = "mainnet";
     } else if(ui->actionTestNet->isChecked()) {
@@ -46,8 +50,8 @@ MainWindow::MainWindow(QWidget *parent)
     } else if(ui->actionDevNet->isChecked()) {
         network = "devnet";
     }
+    this->setWindowTitle(QString::asprintf(MAIN_WINDOW_TITLE, network.toStdString().data()));
 
-    setWinTitle();
 
     homePath = QDir::homePath();
     loadConfig();
@@ -70,13 +74,16 @@ MainWindow::~MainWindow()
 
 void MainWindow::loadAtStart() {
     timerLoadWalletStart.stop();
+#ifdef Q_OS_WIN32
     installDotNetSdkForSsl();
     installSsl();
+#endif
     checkNetSdk();
     /* Force install, only for debug. */
     //installSdk();
     installLyraCli();
 
+    setWinTitle();
     on_actionLoad_Wallet_triggered();
 }
 
@@ -85,13 +92,13 @@ void MainWindow::dbg(QStringList data) {
         err = data[data.count() - 1];
     }
     debugWindow->append(data);
-    qDebug() << data << Qt::endl;
+    qDebug() << data << endLine;
 }
 
 void MainWindow::dbg(QString data) {
     err = data;
     debugWindow->append(data);
-    qDebug() << data << Qt::endl;
+    qDebug() << data << endLine;
 }
 
 void MainWindow::initProgress() {
@@ -99,6 +106,7 @@ void MainWindow::initProgress() {
     loadWalletProgress->setMaximum(0);
     loadWalletProgress->setValue(0);
     loadWalletProgress->setWindowTitle(tr("Operation in progress..."));
+    loadWalletProgress->setGeometry(0, 0, 300, loadWalletProgress->height());
     QIcon pllIcon = QIcon(execPath + WINDOW_ICO_SMALL);
     loadWalletProgress->setWindowIcon(pllIcon);
     loadWalletProgress->show();
@@ -110,12 +118,34 @@ void MainWindow::deleteProgress() {
 
 
 bool MainWindow::installSdk() {
-    dbg("ERROR: NET SDK 3.1.402 not found.");
+    dbg("INFO: NET SDK 3.1.402 not found.");
     dbg("INFO: We will download and install NET SDK 3.1.402.");
 
+
+
+#ifdef Q_OS_UNIX
+    QString program = "gnome-terminal";
+    QStringList arguments;
+    arguments << "--wait";
+    arguments << "-e";
+    arguments << "bash -c './dependency/ubuntuSdkCoreInstall.sh'";
+    lyraWalletProcess.setParent(this);
+    lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
+    connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
+    lyraWalletProcess.execute(program, arguments);
+    if(lyraWalletProcess.waitForStarted(5000)) {
+        lyraWalletProcess.waitForFinished();
+        qint64 procId = lyraWalletProcess.processId();
+        dbg(QString::number(procId));
+        while(lyraWalletProcess.state() == QProcess::Running);
+        lyraWalletProcess.close();
+        return false;
+    }
+    return true;
+#elif defined(Q_OS_WIN32)
     httpDownload sdkDownload(this);
-    if(!sdkDownload.getSizeEqual(new QString(DEPENDENCY_DIR + DOT_NET_CORE_NAME), new QString("https://download.visualstudio.microsoft.com/download/pr/9706378b-f244-48a6-8cec-68a19a8b1678/1f90fd18eb892cbb0bf75d9cff377ccb/dotnet-sdk-3.1.402-win-x64.exe"))) {
-        if(!sdkDownload.download(QString("Download " + QString(DOT_NET_CORE_NAME)), new QString(DEPENDENCY_DIR + DOT_NET_CORE_NAME), new QString("https://download.visualstudio.microsoft.com/download/pr/9706378b-f244-48a6-8cec-68a19a8b1678/1f90fd18eb892cbb0bf75d9cff377ccb/dotnet-sdk-3.1.402-win-x64.exe"))) {
+    if(!sdkDownload.getSizeEqual(new QString(DEPENDENCY_DIR + DOT_NET_CORE_NAME), new QString(DOT_NET_CORE_WEB_SRC))) {
+        if(!sdkDownload.download(QString("Download " + QString(DOT_NET_CORE_NAME)), new QString(DEPENDENCY_DIR + DOT_NET_CORE_NAME), new QString(DOT_NET_CORE_WEB_SRC))) {
             QMessageBox::critical(this, tr("ERROR"),
                                      tr("LYRA CLI wallet can not run without\n\r .NET Core 3.1.402.\n\r\n\r This GUI will start for demonstration only."));
             return false;
@@ -137,11 +167,11 @@ bool MainWindow::installSdk() {
         dbg("ERROR: .NET Core installer not starting.");
     }
     return true;
+#endif
 }
 
 bool MainWindow::checkNetSdk() {
-    QString programFilesPath = QString::fromUtf8(qgetenv("ProgramW6432"));
-    QString program = PROGRAM_FILES_6432 + "dotnet/dotnet.exe";
+    QString program = "dotnet";
     QStringList arguments;
     arguments << "--list-sdks";
     QProcess netSdk;
@@ -149,7 +179,7 @@ bool MainWindow::checkNetSdk() {
     netSdk.setReadChannel(QProcess::StandardOutput);
     netSdk.start(program, arguments);
 
-    if(netSdk.waitForStarted(5000)) {
+    if(netSdk.waitForStarted(2000)) {
         netSdk.waitForFinished();
         QString sdkCliRead = netSdk.readAll();
         QStringList sdkVersions = sdkCliRead.split("\n");
@@ -157,8 +187,8 @@ bool MainWindow::checkNetSdk() {
         for(QString line : sdkVersions) {
             dbg("INFO: NET SDK Version: " + line.remove("\r"));
         }
-        if(sdkCliRead.contains("3.1.402")) {
-            dbg("INFO: NET SDK 3.1.402 found.");
+        if(sdkCliRead.contains("3.1")) {
+            dbg("INFO: NET SDK 3.1 found.");
         } else {
             return installSdk();
         }
@@ -177,10 +207,33 @@ bool MainWindow::installLyraCli() {
         if(!sdkDownload.download(QString("Download lyra.permissionless-" + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(DEPENDENCY_DIR + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
             dbg("ERROR: Downloading LYRA CLI archive.");
             return false;
+        } else {
+            dbg("INFO: Download LYRA CLI wallet succesful.");
         }
     }
-    dbg("INFO: Download LYRA CLI wallet succesful.");
-    QString program = DEPENDENCY_DIR + "7za.exe";
+
+#ifdef Q_OS_UNIX
+    QString program = "tar";
+    QStringList arguments;
+    arguments << "-xvjf";
+    arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar.bz2";
+    arguments << "-C";
+    arguments << LYRA_CLI_DST_PATH;
+    lyraWalletProcess.setParent(this);
+    lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
+    connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
+    lyraWalletProcess.start(program, arguments);
+    //QStringList rec;
+    if(lyraWalletProcess.waitForStarted(5000)) {
+        lyraWalletProcess.waitForFinished();
+        while(lyraWalletProcess.state() == QProcess::Running);
+        lyraWalletProcess.close();
+    } else {
+        dbg("ERROR: tar not starting.");
+        return false;
+    }
+#elif defined(Q_OS_WIN32)
+    QString program = DEPENDENCY_DIR + ARCHIVER_NAME;
     QStringList arguments;
     arguments << "x";
     arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar.bz2";
@@ -216,9 +269,11 @@ bool MainWindow::installLyraCli() {
         dbg("ERROR: 7z not starting.");
         return false;
     }
+#endif
     return true;
 }
 
+#ifdef Q_OS_WIN32
 bool MainWindow::installSsl () {
     /*
      * Look for Open SSL executable in program files, if is not found, install it.
@@ -247,12 +302,14 @@ bool MainWindow::installSsl () {
     }
     return true;
 }
+#endif
 
+#ifdef Q_OS_WIN32
 bool MainWindow::installDotNetSdkForSsl () {
     /*
      * Look for Open SSL executable in program files, if is not found, install it.
      */
-    dbg("INFO: Seatch for C++ 2017 Redistributable on this machine.");
+    dbg("INFO: Search for C++ 2017 Redistributable on this machine.");
     QSettings reg("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64", QSettings::NativeFormat);
     QString cppRedVersion = reg.value("Version").toString();
     if(cppRedVersion.length()) {
@@ -289,9 +346,9 @@ bool MainWindow::installDotNetSdkForSsl () {
     }
     return true;
 }
+#endif
 
 void MainWindow::setWinTitle() {
-    this->setWindowTitle(QString::asprintf(MAIN_WINDOW_TITLE, network.toStdString().data()));
     ui->networkWarningLabel->setText("You are on " + network + " network");
     if(!network.compare("mainnet")) {
         ui->networkWarningLabel->setStyleSheet("font-weight: bold; color: red; font: bold 22px");
@@ -306,9 +363,9 @@ bool MainWindow::createWallet(QString name, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
-    QString program = "C:\\Program Files\\dotnet\\dotnet.exe";
+    QString program = "dotnet";
     QStringList arguments;
-    arguments << execPath + "\\lyra\\cli\\lyra.dll" << "--networkid" << network << "-p" << "webapi";
+    arguments << execPath + "/lyra/cli/lyra.dll" << "--networkid" << network << "-p" << "webapi";
 
     lyraWalletProcess.setParent(this);
     lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
@@ -317,19 +374,20 @@ bool MainWindow::createWallet(QString name, QString pass) {
 
     loadWalletProgress->setMaximum(5);
     loadWalletProgress->setValue(0);
+    loadWalletProgress->setWindowTitle(tr("Creating wallet..."));
 
     if(lyraWalletProcess.waitForStarted(5000))
     {
         dbg("INFO: LYRA CLI wallet instance started.");
         loadWalletProgress->setValue(1);
-        if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 2000)) {
+        if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 5000)) {
             loadWalletProgress->setValue(2);
             dbg("INFO: LYRA CLI wallet responded as expected.");
             QString set = name + "\n";
-            if(expectResponse(&set, QString("Local account data not found."), nullptr, 2000)) {
+            if(expectResponse(&set, QString("Local account data not found."), nullptr, 5000)) {
                 loadWalletProgress->setValue(3);
                 set = "Y\n";
-                if(expectResponse(&set, QString("Please input a password:"), nullptr, 2000)) {
+                if(expectResponse(&set, QString("Please input a password:"), nullptr, 5000)) {
                     loadWalletProgress->setValue(4);
                     set = pass + "\n";
                     QStringList rec;
@@ -383,9 +441,9 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
-    QString program = "C:\\Program Files\\dotnet\\dotnet.exe";
+    QString program = "dotnet";
     QStringList arguments;
-    arguments << execPath + "\\lyra\\cli\\lyra.dll" << "--networkid" << network << "-p" << "webapi";
+    arguments << execPath + "/lyra/cli/lyra.dll" << "--networkid" << network << "-p" << "webapi";
 
     lyraWalletProcess.setParent(this);
     lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
@@ -394,25 +452,26 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
 
     loadWalletProgress->setMaximum(6);
     loadWalletProgress->setValue(0);
+    loadWalletProgress->setWindowTitle(tr("Recovering wallet..."));
     if(lyraWalletProcess.waitForStarted(5000))
     {
         dbg("INFO: LYRA CLI wallet instance started.");
         loadWalletProgress->setValue(1);
-        if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 2000)) {
+        if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 5000)) {
             loadWalletProgress->setValue(2);
             dbg("INFO: LYRA wallet responded as expected.");
             QString set = name + "\n";
-            if(expectResponse(&set, QString("Local account data not found."), nullptr, 2000)) {
+            if(expectResponse(&set, QString("Local account data not found."), nullptr, 5000)) {
                 loadWalletProgress->setValue(3);
                 set = "n\n";
-                if(expectResponse(&set, QString("Please enter private key to restore account"), nullptr, 2000)) {
+                if(expectResponse(&set, QString("Please enter private key to restore account"), nullptr, 5000)) {
                     loadWalletProgress->setValue(4);
                     set = key + "\n";
-                    if(expectResponse(&set, QString("Please input a password"), nullptr, 2000)) {
+                    if(expectResponse(&set, QString("Please input a password"), nullptr, 5000)) {
                         loadWalletProgress->setValue(5);
                         set = pass + "\n";
                         QStringList rec;
-                        if(expectResponse(&set, QString("Balance:"), &rec, 5000)) {
+                        if(expectResponse(&set, QString("Balance:"), &rec, 10000)) {
                             dbg("INFO: " + name + " LYRA wallet successfully oppened.");
                             loadWalletProgress->setValue(6);
                             for(QString line : rec) {
@@ -460,22 +519,25 @@ bool MainWindow::openWallet(QString name, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
-    QString program = "C:\\Program Files\\dotnet\\dotnet.exe";
+    QString program = "dotnet";
     QStringList arguments;
-    arguments << execPath + "\\lyra\\cli\\lyra.dll" << "--networkid" << network << "-p" << "webapi";
+    arguments << execPath + "/lyra/cli/lyra.dll" << "--networkid" << network << "-p" << "webapi";
 
     lyraWalletProcess.setParent(this);
     lyraWalletProcess.setReadChannel(QProcess::StandardOutput);
+    //lyraWalletProcess.setProcessChannelMode((QProcess::MergedChannels));
+
     connect(&lyraWalletProcess,SIGNAL(readyReadStandardOutput()) ,this,SLOT(updaterev_line()));
     lyraWalletProcess.start(program, arguments);
 
     loadWalletProgress->setMaximum(5);
     loadWalletProgress->setValue(0);
+    loadWalletProgress->setWindowTitle(tr("Oppening wallet..."));
     if(lyraWalletProcess.waitForStarted(5000))
     {
         dbg("INFO: LYRA CLI wallet instance started.");
         loadWalletProgress->setValue(1);
-        if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 2000)) {
+        if(expectResponse(nullptr, QString("Press Enter for default account"), nullptr, 5000)) {
             loadWalletProgress->setValue(2);
             dbg("INFO: LYRA wallet responded as expected.");
             QString set;
@@ -487,7 +549,7 @@ bool MainWindow::openWallet(QString name, QString pass) {
             if(expectResponse(&set, QString("Please input a password to open wallet"), nullptr, 5000)) {
                 loadWalletProgress->setValue(3);
                 set = pass + "\n";
-                if(expectResponse(&set, QString("Type 'help' to see the list"), nullptr, 2000)) {
+                if(expectResponse(&set, QString("Type 'help' to see the list"), nullptr, 5000)) {
                     loadWalletProgress->setValue(4);
                     QStringList rec;
                     set = "";
@@ -537,19 +599,22 @@ bool MainWindow::openWallet(QString name, QString pass) {
 
 bool MainWindow::sendCoins(QString id, double value) {
     QString set = "send\n";
-    loadWalletProgress->setMaximum(5);
+    loadWalletProgress->setMaximum(2);
     loadWalletProgress->setValue(0);
-    if(expectResponse(&set, QString("Please enter destination account id"), nullptr, 2000)) {
+    loadWalletProgress->setWindowTitle(tr("Sending LYR coins..."));
+    if(expectResponse(&set, QString("Please enter destination account id"), nullptr, 5000)) {
         loadWalletProgress->setValue(1);
         set = id + "\n";
-        dbg("INFO: ID Sending:" + set);
-        if(expectResponse(&set, QString("Please enter amount"), nullptr, 2000)) {
+        dbg("INFO: ID Sending: " + set);
+        if(expectResponse(&set, QString("Please enter amount"), nullptr, 5000)) {
             loadWalletProgress->setValue(2);
             QLocale sys = QLocale::system();
             set = QString::asprintf("%.8f", value) + "\n";
+#ifdef Q_OS_WIN32
             if(sys.decimalPoint() == ',') {
                 set = set.replace(".", ",");
             }
+#endif
             dbg("INFO: Coins sending:" + set);
             if(expectResponse(&set, QString("Send Transfer block has been authorized successfully"), nullptr, 10000)) {
                 dbg(QString("INFO: Coins send: ") + QString::asprintf("%.8f", value) + QString("LYR, to id: ") + id);
@@ -572,6 +637,7 @@ bool MainWindow::syncAccount() {
     QString set = "sync\n";
     loadWalletProgress->setMaximum(2);
     loadWalletProgress->setValue(0);
+    loadWalletProgress->setWindowTitle(tr("Sincyng account..."));
     dbg("INFO: Sync in progress." + set);
     if(expectResponse(&set, QString("Sync Result: Success"), nullptr, 10000)) {
         loadWalletProgress->setValue(1);

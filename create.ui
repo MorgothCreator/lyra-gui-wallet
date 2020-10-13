@@ -146,8 +146,8 @@
   <tabstop>wallNameLineEdit</tabstop>
   <tabstop>pass1LineEdit</tabstop>
   <tabstop>pass2LineEdit</tabstop>
-  <tabstop>cancelPushButton</tabstop>
   <tabstop>okPushButton</tabstop>
+  <tabstop>cancelPushButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>

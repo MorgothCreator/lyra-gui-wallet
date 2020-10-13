@@ -8,6 +8,7 @@
 #include <QProgressDialog>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QEventLoop>
 
 class httpDownload : public QMainWindow
 {
@@ -17,6 +18,7 @@ public:
     ~httpDownload();
     bool download(QString progressTitle = nullptr, QString *filePath = nullptr, QString *sUrl = nullptr);
     bool getSizeEqual(QString *filePath = nullptr, QString *sUrl = nullptr);
+    bool checkRedirect(QString *sUrl);
 
     bool httpRequestAborted;
 
@@ -30,6 +32,11 @@ private:
     QNetworkAccessManager *manager;
     QNetworkReply *reply;
     bool finished;
+    bool isGetSize;
+    bool requestSize;
+    bool chkRedirect;
+    bool isRedirected;
+    QEventLoop *eventLoop;
 
     bool getSizeFinished;
     bool redirected;
@@ -48,6 +55,9 @@ private slots:
 
     // slot for downloadProgress()
     void updateDownloadProgress(qint64, qint64);
+
+    void fileSize();
+    void quitLoop();
 
 };
 

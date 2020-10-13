@@ -1,3 +1,5 @@
+#include <QtCore>
+
 #include <QMessageBox>
 #include <QThread>
 #include <QApplication>
@@ -15,6 +17,8 @@ httpDownload::~httpDownload() {
 }
 
 bool httpDownload::download(QString progressTitle, QString *filePath, QString *sUrl) {
+    file = nullptr;
+    progressDialog = nullptr;
     if (!QFile::exists(*filePath)) {
         file = new QFile(*filePath);
         if (!file->open(QIODevice::WriteOnly)) {
@@ -32,15 +36,15 @@ bool httpDownload::download(QString progressTitle, QString *filePath, QString *s
         QIcon pllIcon = QIcon(QCoreApplication::applicationDirPath() + WINDOW_ICO_SMALL);
         progressDialog->setWindowIcon(pllIcon);
         connect(progressDialog, SIGNAL(canceled()), this, SLOT(cancelDownload()));
-        progressDialog->show();
 
         manager = new QNetworkAccessManager(parent);
         url.setUrl(*sUrl);
         finished = false;
+        isGetSize = false;
+        requestSize = false;
+        eventLoop = new QEventLoop(parent);
         startRequest(url);
-        while(!finished) {
-            QApplication::processEvents();
-        }
+        eventLoop->exec();
         if(!httpRequestAborted) {
             return true;
         }
@@ -49,44 +53,62 @@ bool httpDownload::download(QString progressTitle, QString *filePath, QString *s
 }
 
 bool httpDownload::getSizeEqual(QString *filePath, QString *sUrl) {
+    file = nullptr;
+    progressDialog = nullptr;
     httpRequestAborted = false;
     redirected = false;
     file = nullptr;
-    qint64 sizeRedirected = -1;
     size = -1;
     progressDialog = nullptr;
 
     manager = new QNetworkAccessManager(parent);
     url.setUrl(*sUrl);
     finished = false;
+    isGetSize = false;
+    requestSize = true;
+    eventLoop = new QEventLoop(parent);
+    isRedirected = checkRedirect(sUrl);
     startRequest(url);
-    while(!finished) {
-        QApplication::processEvents();
-        if(size != -1) {
-            break;
-        }
-    }
-    sizeRedirected = size;
-
-    for (int cnt = 0; cnt < 5000; cnt++) {
-        QThread::msleep(1);
-        QApplication::processEvents();
-        if(!redirected || sizeRedirected != size) {
-            break;
-        }
-    }
-
-    httpRequestAborted = true;
-    reply->abort();
-
+    eventLoop->exec();
     QFile f(*filePath);
-    int rSize = size;
-    int fSize = f.size();
+    qint64 rSize = size;
+    qint64 fSize = f.size();
     if(fSize != rSize) {
+        if(QFile::exists(*filePath)) {
+            QFile::remove(*filePath);
+        }
         return false;
     } else {
         return true;
     }
+}
+
+bool httpDownload::checkRedirect(QString *sUrl) {
+    url.setUrl(*sUrl);
+    file = nullptr;
+    progressDialog = nullptr;
+    manager = new QNetworkAccessManager(parent);
+    reply = manager->get(QNetworkRequest(url));
+    eventLoop = new QEventLoop(parent);
+    connect(reply, SIGNAL(readyRead()),
+            this, SLOT(quitLoop()));
+    eventLoop->exec();
+
+    QVariant redirectionTarget = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
+    if(!redirectionTarget.isNull()) {
+        reply->abort();
+        reply->deleteLater();
+        manager->deleteLater();
+        return true;
+    }
+    reply->abort();
+    reply->deleteLater();
+    manager->deleteLater();
+    return false;
+}
+
+void httpDownload::quitLoop() {
+    emit eventLoop->quit();
 }
 
 void httpDownload::httpReadyRead()
@@ -104,7 +126,7 @@ void httpDownload::updateDownloadProgress(qint64 bytesRead, qint64 totalBytes)
     if (httpRequestAborted)
         return;
 
-    size = totalBytes;
+    //size = totalBytes;
 
     if(progressDialog) {
         progressDialog->setMaximum(totalBytes);
@@ -115,10 +137,8 @@ void httpDownload::updateDownloadProgress(qint64 bytesRead, qint64 totalBytes)
 // During the download progress, it can be canceled
 void httpDownload::cancelDownload()
 {
-    //ui->statusLabel->setText(tr("Download canceled."));
     httpRequestAborted = true;
     reply->abort();
-    //ui->downloadButton->setEnabled(true);
 }
 
 // When download finished or canceled, this will be called
@@ -137,6 +157,7 @@ void httpDownload::httpDownloadFinished()
             progressDialog->hide();
         }
         finished = true;
+        emit eventLoop->quit();
         return;
     }
 
@@ -155,9 +176,11 @@ void httpDownload::httpDownloadFinished()
         if (file) {
             file->remove();
         }
+        if(!requestSize) {
         QMessageBox::information(this, tr("HTTPS"),
                                  tr("Download failed: %1.")
                                  .arg(reply->errorString()));
+        }
         //ui->downloadButton->setEnabled(true);
     } else if (!redirectionTarget.isNull()) {
         QUrl newUrl = url.resolved(redirectionTarget.toUrl());
@@ -171,6 +194,7 @@ void httpDownload::httpDownloadFinished()
                 file->open(QIODevice::WriteOnly);
                 file->resize(0);
             }
+            isGetSize = true;
             startRequest(url);
             return;
         }
@@ -188,15 +212,33 @@ void httpDownload::httpDownloadFinished()
     file = 0;
     manager = 0;
     finished = true;
+    emit eventLoop->quit();
+}
+
+void httpDownload::fileSize() {
+    size = reply->header(QNetworkRequest::ContentLengthHeader).toString().toLongLong();
+    if((isGetSize && requestSize) || (!isRedirected && requestSize)) {
+        reply->abort();
+        reply->deleteLater();
+        manager->deleteLater();
+        emit eventLoop->quit();
+    }
 }
 
 // This will be called when download button is clicked
 void httpDownload::startRequest(QUrl url) {
+    if(progressDialog) {
+        progressDialog->show();
+    }
+//https://github-production-release-asset-2e65be.s3.amazonaws.com/274731863/f9b1e900-0aa5-11eb-98a8-9039778d56ff?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20201013%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20201013T120103Z&X-Amz-Expires=300&X-Amz-Signature=72be20ad204551e5bf9f4515b2dbe2a65ac4087b071c139c11239fdd633c0623&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=274731863&response-content-disposition=attachment%3B%20filename%3Dlyra.permissionless-1.7.8.0.tar.bz2&response-content-type=application%2Foctet-stream
+    //finished = false;
     // get() method posts a request
     // to obtain the contents of the target request
     // and returns a new QNetworkReply object
     // opened for reading which emits
     // the readyRead() signal whenever new data arrives.
+    //if(!redirected) {
+    //}
     reply = manager->get(QNetworkRequest(url));
 
     // Whenever more data is received from the network,
@@ -213,5 +255,7 @@ void httpDownload::startRequest(QUrl url) {
     // there will be no more updates to the reply's data or metadata.
     connect(reply, SIGNAL(finished()),
             this, SLOT(httpDownloadFinished()));
+
+    connect(reply, SIGNAL(metaDataChanged()), this, SLOT(fileSize()));
 }
 
