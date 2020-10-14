@@ -52,7 +52,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Build on: </string>
+    <string>Lyra GUI Wallet 1.7.8.0-u2</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">

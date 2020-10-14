@@ -3,7 +3,7 @@ QT       += network
 
 ICON = myapp.icns
 RC_ICONS = your_icon.ico
-TARGET = lyra-gui-wallet-win64-1.7.8.0-u1
+TARGET = lyra-gui-wallet-win64-1.7.8.0-u2
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
