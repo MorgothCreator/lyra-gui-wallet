@@ -9,8 +9,9 @@
 #include <QNetworkRequest>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QStandardItemModel>
 
-#include "debug.h"
+#include "debugwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -30,11 +31,12 @@ public:
 private:
     Ui::MainWindow *ui;
     bool expectResponse(QString *command, QString expectedResponse, QStringList *receivedData, int timeout);
-    bool checkNetSdk();
     bool installSdk();
+    bool checkNetSdk();
     bool installLyraCli();
+    bool checkLyraCli();
     bool installSsl();
-    bool installDotNetSdkForSsl();
+    bool installCppRedistForSsl();
     void setWinTitle();
     bool getConfig(QString name, QString &response);
     bool setConfig(QString name, QString data);
@@ -44,15 +46,20 @@ private:
     bool recoverWallet(QString name, QString key, QString pass);
     bool openWallet(QString name, QString pass);
     bool sendCoins(QString id, double value);
+    bool showPrivateKey(QString *key);
+    bool showId(QString *id);
+    bool voteFor(QString id);
+    bool showVotedFor();
     bool readHistory();
     bool syncAccount();
     void exitCli();
-    void initProgress();
+    void initProgress(QString title);
     void deleteProgress();
 
     QProcess lyraWalletProcess;
     QString homePath;
     QStringList config;
+    QString walletName;
     double fee;
     QString myId;
     QString myVotedId;
@@ -65,8 +72,12 @@ private:
     QString network;
     QString execPath;
 
-    debug *debugWindow;
+    bool installSemaphore;
+
+    debugWindow *dbgWindow;
     QProgressDialog *loadWalletProgress;
+
+    QStandardItemModel *modelHistory;
 
 private slots:
     void loadAtStart();
@@ -85,5 +96,10 @@ private slots:
     void on_actionAbout_triggered();
     void on_actionDebug_triggered();
     void on_actionExit_triggered();
+    void on_actionShow_private_key_triggered();
+    void on_actionVote_For_triggered();
+    void on_actionReceive_triggered();
+    void on_actionSend_triggered();
+    void on_actionShow_voted_for_triggered();
 };
 #endif // MAINWINDOW_H

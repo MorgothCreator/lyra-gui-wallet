@@ -1,11 +1,11 @@
 #include <QIcon>
-#include "about.h"
-#include "ui_about.h"
+#include "aboutwindow.h"
+#include "ui_aboutwindow.h"
 #include "def.h"
 
-about::about(QWidget *parent) :
+aboutWindow::aboutWindow(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::about)
+    ui(new Ui::aboutWindow)
 {
     ui->setupUi(this);
 
@@ -13,7 +13,7 @@ about::about(QWidget *parent) :
     this->setWindowIcon(pllIcon);
 }
 
-about::~about()
+aboutWindow::~aboutWindow()
 {
     delete ui;
 }

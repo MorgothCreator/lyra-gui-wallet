@@ -1,10 +1,10 @@
-#include "ui_create.h"
+#include "ui_namepasswindow.h"
 #include <QFocusEvent>
-#include "create.h"
+#include "namepasswindow.h"
 
-createNewWallet::createNewWallet(QWidget *parent) :
+namePassWindow::namePassWindow(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::createNewWallet)
+    ui(new Ui::namePassWindow)
 {
     ui->setupUi(this);
     ui->wallNameLineEdit->activateWindow();
@@ -16,12 +16,12 @@ createNewWallet::createNewWallet(QWidget *parent) :
     ok = false;
 }
 
-createNewWallet::~createNewWallet()
+namePassWindow::~namePassWindow()
 {
     delete ui;
 }
 
-void createNewWallet::on_pass1LineEdit_textChanged(const QString &arg1)
+void namePassWindow::on_pass1LineEdit_textChanged(const QString &arg1)
 {
     pass1 = arg1;
     ui->pass1LineEdit->setStyleSheet("font-weight: bold; color: black; font: bold 22px");
@@ -32,7 +32,7 @@ void createNewWallet::on_pass1LineEdit_textChanged(const QString &arg1)
     }
 }
 
-void createNewWallet::on_pass2LineEdit_textChanged(const QString &arg1)
+void namePassWindow::on_pass2LineEdit_textChanged(const QString &arg1)
 {
     pass2 = arg1;
     if(pass1.compare(pass2)) {
@@ -42,7 +42,7 @@ void createNewWallet::on_pass2LineEdit_textChanged(const QString &arg1)
     }
 }
 
-void createNewWallet::on_okPushButton_clicked()
+void namePassWindow::on_okPushButton_clicked()
 {
     QRegExp hexMatcher("^[a-zA-Z0-9_-]*$", Qt::CaseInsensitive);
     if (!hexMatcher.exactMatch(ui->wallNameLineEdit->text())) {
@@ -56,13 +56,13 @@ void createNewWallet::on_okPushButton_clicked()
     }
 }
 
-void createNewWallet::on_cancelPushButton_clicked()
+void namePassWindow::on_cancelPushButton_clicked()
 {
     ok = false;
     this->close();
 }
 
-void createNewWallet::on_wallNameLineEdit_textChanged(const QString &)
+void namePassWindow::on_wallNameLineEdit_textChanged(const QString &)
 {
     QRegExp hexMatcher("^[a-zA-Z0-9_-]*$", Qt::CaseInsensitive);
     if (!hexMatcher.exactMatch(ui->wallNameLineEdit->text())) {

@@ -1,10 +1,10 @@
 #include <QFocusEvent>
-#include "load.h"
-#include "ui_load.h"
+#include "namewindow.h"
+#include "ui_namewindow.h"
 
-loadWallet::loadWallet(QWidget *parent) :
+nameWindow::nameWindow(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::loadWallet)
+    ui(new Ui::nameWindow)
 {
     ui->setupUi(this);
     ok = false;
@@ -18,24 +18,24 @@ loadWallet::loadWallet(QWidget *parent) :
     ui->nameLineEdit->setCursorPosition(1);
 }
 
-loadWallet::~loadWallet()
+nameWindow::~nameWindow()
 {
     delete ui;
 }
 
-void loadWallet::on_buttonBox_accepted()
+void nameWindow::on_buttonBox_accepted()
 {
     ok = true;
     this->close();
 }
 
-void loadWallet::on_buttonBox_rejected()
+void nameWindow::on_buttonBox_rejected()
 {
     ok = false;
     this->close();
 }
 
-void loadWallet::on_nameLineEdit_textChanged(const QString &arg1)
+void nameWindow::on_nameLineEdit_textChanged(const QString &arg1)
 {
     QRegExp hexMatcher("^[a-zA-Z0-9_-]*$", Qt::CaseInsensitive);
     if (!hexMatcher.exactMatch(ui->nameLineEdit->text())) {

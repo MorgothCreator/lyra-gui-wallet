@@ -61,13 +61,13 @@ bool httpDownload::getSizeEqual(QString *filePath, QString *sUrl) {
     size = -1;
     progressDialog = nullptr;
 
+    isRedirected = checkRedirect(sUrl);
     manager = new QNetworkAccessManager(parent);
     url.setUrl(*sUrl);
     finished = false;
     isGetSize = false;
     requestSize = true;
     eventLoop = new QEventLoop(parent);
-    isRedirected = checkRedirect(sUrl);
     startRequest(url);
     eventLoop->exec();
     QFile f(*filePath);
@@ -88,6 +88,7 @@ bool httpDownload::checkRedirect(QString *sUrl) {
     file = nullptr;
     progressDialog = nullptr;
     manager = new QNetworkAccessManager(parent);
+    manager->setStrictTransportSecurityEnabled(false);
     reply = manager->get(QNetworkRequest(url));
     eventLoop = new QEventLoop(parent);
     connect(reply, SIGNAL(readyRead()),
@@ -219,8 +220,6 @@ void httpDownload::fileSize() {
     size = reply->header(QNetworkRequest::ContentLengthHeader).toString().toLongLong();
     if((isGetSize && requestSize) || (!isRedirected && requestSize)) {
         reply->abort();
-        reply->deleteLater();
-        manager->deleteLater();
         emit eventLoop->quit();
     }
 }

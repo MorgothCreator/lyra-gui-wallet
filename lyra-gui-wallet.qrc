@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>resources/ico/window_16x16.png</file>
+    <file>resources/ico/copy.png</file>
+</qresource>
+</RCC>

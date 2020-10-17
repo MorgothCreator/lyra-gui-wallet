@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>privateKey</class>
- <widget class="QDialog" name="privateKey">
+ <class>nameWindow</class>
+ <widget class="QDialog" name="nameWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>372</width>
-    <height>71</height>
+    <width>352</width>
+    <height>102</height>
    </rect>
   </property>
   <property name="focusPolicy">
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>Private key</string>
-  </property>
-  <property name="windowIcon">
-   <iconset>
-    <normaloff>resources/currency_plain.png</normaloff>resources/currency_plain.png</iconset>
+   <string>Load wallet</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -26,65 +22,66 @@
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>30</y>
-     <width>351</width>
-     <height>32</height>
+     <x>260</x>
+     <y>20</y>
+     <width>81</width>
+     <height>61</height>
     </rect>
    </property>
    <property name="focusPolicy">
     <enum>Qt::StrongFocus</enum>
    </property>
    <property name="orientation">
-    <enum>Qt::Horizontal</enum>
+    <enum>Qt::Vertical</enum>
    </property>
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
    </property>
   </widget>
-  <widget class="QLineEdit" name="privateKeyLineEdit">
+  <widget class="QGroupBox" name="nameGroupBox">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>321</width>
-     <height>20</height>
+     <width>241</width>
+     <height>81</height>
     </rect>
    </property>
-   <property name="text">
-    <string/>
+   <property name="font">
+    <font>
+     <pointsize>16</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
    </property>
-   <property name="echoMode">
-    <enum>QLineEdit::Password</enum>
+   <property name="locale">
+    <locale language="English" country="UnitedStates"/>
    </property>
-   <property name="readOnly">
-    <bool>true</bool>
+   <property name="title">
+    <string>Wallet name:</string>
    </property>
-  </widget>
-  <widget class="QPushButton" name="copyToClipboardPushButton">
-   <property name="geometry">
-    <rect>
-     <x>330</x>
-     <y>10</y>
-     <width>31</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
+   <widget class="QLineEdit" name="nameLineEdit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>40</y>
+      <width>221</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
  </widget>
  <tabstops>
-  <tabstop>privateKeyLineEdit</tabstop>
-  <tabstop>copyToClipboardPushButton</tabstop>
+  <tabstop>nameLineEdit</tabstop>
+  <tabstop>buttonBox</tabstop>
  </tabstops>
  <resources/>
  <connections>
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>privateKey</receiver>
+   <receiver>nameWindow</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -100,7 +97,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>privateKey</receiver>
+   <receiver>nameWindow</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

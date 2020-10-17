@@ -4,16 +4,16 @@
 #include <QDialog>
 
 namespace Ui {
-class createNewWallet;
+class namePassWindow;
 }
 
-class createNewWallet : public QDialog
+class namePassWindow : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit createNewWallet(QWidget *parent = nullptr);
-    ~createNewWallet();
+    explicit namePassWindow(QWidget *parent = nullptr);
+    ~namePassWindow();
     bool getOk() {
         return ok;
     }
@@ -32,7 +32,7 @@ private slots:
     void on_wallNameLineEdit_textChanged(const QString &arg1);
 
 private:
-    Ui::createNewWallet *ui;
+    Ui::namePassWindow *ui;
     QString wallName;
     QString pass1;
     QString pass2;

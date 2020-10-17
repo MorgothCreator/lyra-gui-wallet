@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>about</class>
- <widget class="QDialog" name="about">
+ <class>aboutWindow</class>
+ <widget class="QDialog" name="aboutWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>559</width>
+    <width>640</width>
     <height>240</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>640</width>
+    <height>240</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>640</width>
+    <height>240</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>About</string>
@@ -16,7 +28,7 @@
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>470</x>
+     <x>540</x>
      <y>200</y>
      <width>81</width>
      <height>32</height>
@@ -34,12 +46,12 @@
     <rect>
      <x>10</x>
      <y>40</y>
-     <width>501</width>
+     <width>611</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Developed in Qt 5.15.1 community edition</string>
+    <string>Developed in Qt community edition</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_2">
@@ -47,12 +59,12 @@
     <rect>
      <x>10</x>
      <y>60</y>
-     <width>231</width>
+     <width>611</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Lyra GUI Wallet 1.7.8.0-u2</string>
+    <string>Lyra GUI Wallet 1.7.8.0-u3</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">
@@ -60,7 +72,7 @@
     <rect>
      <x>10</x>
      <y>80</y>
-     <width>501</width>
+     <width>611</width>
      <height>20</height>
     </rect>
    </property>
@@ -73,7 +85,7 @@
     <rect>
      <x>10</x>
      <y>110</y>
-     <width>501</width>
+     <width>611</width>
      <height>81</height>
     </rect>
    </property>
@@ -89,7 +101,7 @@ THE DEVELOPER IS NOT RESPONSIBLE FOR ANY LOSS OR DAMAGE DONE BY THIS APPLICATION
     <rect>
      <x>10</x>
      <y>20</y>
-     <width>501</width>
+     <width>611</width>
      <height>16</height>
     </rect>
    </property>
@@ -101,7 +113,7 @@ THE DEVELOPER IS NOT RESPONSIBLE FOR ANY LOSS OR DAMAGE DONE BY THIS APPLICATION
     </font>
    </property>
    <property name="text">
-    <string>LYRA non official GUI wallet based on Lyra Permissionless 1.7.8.0 mainnet CLI</string>
+    <string>LYRA non official GUI on top of Lyra Permissionless 1.7.8.0 mainnet CLI wallet</string>
    </property>
   </widget>
  </widget>
@@ -110,7 +122,7 @@ THE DEVELOPER IS NOT RESPONSIBLE FOR ANY LOSS OR DAMAGE DONE BY THIS APPLICATION
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>about</receiver>
+   <receiver>aboutWindow</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -126,7 +138,7 @@ THE DEVELOPER IS NOT RESPONSIBLE FOR ANY LOSS OR DAMAGE DONE BY THIS APPLICATION
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>about</receiver>
+   <receiver>aboutWindow</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

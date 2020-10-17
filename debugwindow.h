@@ -4,21 +4,21 @@
 #include <QDialog>
 
 namespace Ui {
-class debug;
+class debugWindow;
 }
 
-class debug : public QDialog
+class debugWindow : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit debug(QWidget *parent = nullptr);
-    ~debug();
+    explicit debugWindow(QWidget *parent = nullptr);
+    ~debugWindow();
     void append(QString text);
     void append(QStringList text);
 
 private:
-    Ui::debug *ui;
+    Ui::debugWindow *ui;
 };
 
 #endif // DEBUG_H

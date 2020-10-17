@@ -4,16 +4,16 @@
 #include <QDialog>
 
 namespace Ui {
-class loadWallet;
+class nameWindow;
 }
 
-class loadWallet : public QDialog
+class nameWindow : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit loadWallet(QWidget *parent = nullptr);
-    ~loadWallet();
+    explicit nameWindow(QWidget *parent = nullptr);
+    ~nameWindow();
     QString getName() {
         return wallName;
     }
@@ -28,7 +28,7 @@ private slots:
     void on_nameLineEdit_textChanged(const QString &arg1);
 
 private:
-    Ui::loadWallet *ui;
+    Ui::nameWindow *ui;
     QString wallName;
     bool ok;
 };
