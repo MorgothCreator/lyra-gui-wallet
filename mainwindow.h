@@ -12,6 +12,7 @@
 #include <QStandardItemModel>
 
 #include "debugwindow.h"
+#include "aboutwindow.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -50,7 +51,8 @@ private:
     bool showId(QString *id);
     bool voteFor(QString id);
     bool showVotedFor();
-    bool readHistory();
+    bool readHistory(bool update);
+    //bool updateHistory();
     bool syncAccount();
     void exitCli();
     void initProgress(QString title);
@@ -72,12 +74,20 @@ private:
     QString network;
     QString execPath;
 
-    bool installSemaphore;
+    bool cliBusySemaphore;
 
-    debugWindow *dbgWindow;
+    debugWindow dbgWindow;
     QProgressDialog *loadWalletProgress;
 
+    aboutWindow aboutWin;
+
     QStandardItemModel *modelHistory;
+    QStringList history;
+    QIcon *attentionIco;
+    QIcon *newIco;
+    QIcon *sendIco;
+    QIcon *receiveIco;
+    double lastAmount;
 
 private slots:
     void loadAtStart();
@@ -101,5 +111,7 @@ private slots:
     void on_actionReceive_triggered();
     void on_actionSend_triggered();
     void on_actionShow_voted_for_triggered();
+    void on_hystoryListView_doubleClicked(const QModelIndex &index);
+    void on_actionSave_Wallet_triggered();
 };
 #endif // MAINWINDOW_H

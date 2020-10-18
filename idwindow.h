@@ -35,6 +35,7 @@ private slots:
     void on_copyPushButton_clicked();
     void on_selectionButtonBox_accepted();
     void on_idLineEdit_textChanged(const QString &arg1);
+    void on_selectionButtonBox_rejected();
 };
 
 #endif // RECEIVE_H

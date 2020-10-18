@@ -9,7 +9,7 @@ unix:{
 
 ICON = myapp.icns
 RC_ICONS = your_icon.ico
-TARGET = lyra-gui-wallet-ubuntu64-1.7.8.0-u3
+TARGET = lyra-gui-wallet-ubuntu64-1.7.8.0-u4
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
@@ -39,6 +39,7 @@ SOURCES += \
     mainwindow.cpp \
     password.cpp \
     idwindow.cpp \
+    responseparse.cpp \
     send.cpp \
     pkeywindow.cpp
 
@@ -54,6 +55,7 @@ HEADERS += \
     mainwindow.h \
     password.h \
     idwindow.h \
+    responseparse.h \
     send.h \
     pkeywindow.h
 
@@ -80,6 +82,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 DISTFILES += \
     lyra-gui-wallet.ts \
+    resources/ico/attention-small.png \
+    resources/ico/new-acc-small.png \
+    resources/ico/receive_small.png \
+    resources/ico/send_small.png \
     resources/ico/window_128x128.png \
     resources/ico/window_16x16.png \
     resources/ico/window_256x256.png \

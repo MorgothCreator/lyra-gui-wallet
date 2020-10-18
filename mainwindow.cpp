@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QDir>
+#include <historywindow.h>
 
 #include "pkeywindow.h"
 #include "idwindow.h"
@@ -15,9 +16,9 @@
 #include "password.h"
 #include "namepasswindow.h"
 #include "namewindow.h"
-#include "aboutwindow.h"
 
 #include "httpdownload.h"
+#include "responseparse.h"
 
 #include "def.h"
 
@@ -27,6 +28,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+
+    cliBusySemaphore = true;
 #ifdef Q_OS_OSX
     execPath = QDir::homePath() + "/Documents/lyra";
     QDir root;
@@ -35,11 +38,13 @@ MainWindow::MainWindow(QWidget *parent)
 #else
     execPath = QCoreApplication::applicationDirPath();
 #endif
-    QIcon pllIcon = QIcon(execPath + WINDOW_ICO_SMALL);
-    this->setWindowIcon(pllIcon);
+    QIcon windowIco = QIcon(execPath + WINDOW_ICO_SMALL);
+    this->setWindowIcon(windowIco);
 
-    dbgWindow = new debugWindow(this);
-
+    attentionIco = new QIcon(execPath + ATTENTION_ICO_SMALL);
+    newIco = new QIcon(execPath + NEW_ICO_SMALL);
+    sendIco = new QIcon(execPath + SEND_ICO_SMALL);
+    receiveIco = new QIcon(execPath + RECEIVE_ICO_SMALL);
 
 
     fee = 0;
@@ -64,7 +69,9 @@ MainWindow::MainWindow(QWidget *parent)
     homePath = QDir::homePath();
     loadConfig();
 
-    modelHistory = new QStandardItemModel(0, 1, this);
+    modelHistory = new QStandardItemModel(0, 2, this);
+    ui->hystoryListView->setModel(modelHistory);
+    ui->hystoryListView->setIconSize(QSize(70,70));
 
     timerLoadWalletStart.setInterval(250);
     connect(&timerLoadWalletStart, SIGNAL(timeout()), this, SLOT(loadAtStart()));
@@ -78,7 +85,6 @@ MainWindow::~MainWindow()
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
-    delete dbgWindow;
     delete ui;
 }
 
@@ -121,7 +127,7 @@ void MainWindow::loadAtStart() {
     // installLyraCli();
 
     setWinTitle();
-    this->setEnabled(true);
+    cliBusySemaphore = false;
     on_actionLoad_Wallet_triggered();
 }
 
@@ -129,13 +135,13 @@ void MainWindow::dbg(QStringList data) {
     if(data.count() != 0) {
         err = data[data.count() - 1];
     }
-    dbgWindow->append(data);
+    dbgWindow.append(data);
     qDebug() << data << endLine;
 }
 
 void MainWindow::dbg(QString data) {
     err = data;
-    dbgWindow->append(data);
+    dbgWindow.append(data);
     qDebug() << data << endLine;
 }
 
@@ -563,6 +569,7 @@ bool MainWindow::createWallet(QString name, QString pass) {
                             }
                         }
                         ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
+                        readHistory(false);
                     } else {
                         dbg("ERROR 'New wallet': Unknown.");
                         return false;
@@ -636,6 +643,7 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
                                     numberOfBlocks = sp[1].toInt();
                                 }
                             }
+                            readHistory(false);
                             syncAccount();
                         } else {
                             dbg("ERROR 'Recover wallet': Unknown.");
@@ -725,6 +733,7 @@ bool MainWindow::openWallet(QString name, QString pass) {
                         }
                     }
                     ui->balanceLabel->setText(QString::asprintf("%.8f", myBalance) + " LYR");
+                    readHistory(false);
                 } else {
                     dbg("ERROR 'Open wallet': Invalid password/ wrong password.");
                     return false;
@@ -815,6 +824,7 @@ bool MainWindow::syncAccount() {
                         break;
                     }
                 }
+                readHistory(true);
             } else {
                 dbg("ERROR 'Sync account': Unnexpected response from cli.");
                 return false;
@@ -892,7 +902,8 @@ bool MainWindow::voteFor(QString id) {
     return true;
 }
 
-bool MainWindow::readHistory() {
+bool MainWindow::readHistory(bool update) {
+    QThread::sleep(1);
     if(lyraWalletProcess.state() == QProcess::Running) {
         QString set = "count\n";
         QStringList rec;
@@ -902,7 +913,69 @@ bool MainWindow::readHistory() {
             int count = rec[0].remove("\n").remove("\r").toUInt(&ok);
             if(ok) {
                 if(count) {
+                    if(!update) {
+                        if(modelHistory) {
+                            delete modelHistory;
+                        }
+                        lastAmount = 0;
+                        history.clear();
+                        modelHistory = new QStandardItemModel(0, 2, this);
+                        ui->hystoryListView->setModel(modelHistory);
+                    }
+                    for(int cnt = modelHistory->rowCount() + 1; cnt <= count; cnt++) {
+                        set = "print\n";
+                        if(expectResponse(&set, QString("Please enter transaction block index"), nullptr, 1000)) {
+                            set = QString::number(cnt) + "\n";
+                            rec.clear();
+                            expectResponse(&set, walletName, &rec, 5000);
+                            QStandardItem *item = new QStandardItem();
+                            if(item != 0) {
+                                QString tmpItemTxt;
+                                for(QString line : rec) {
+                                    tmpItemTxt.append(line + "\n");
+                                }
+                                QStringList tmpList = responseParse::print(tmpItemTxt, {"BlockType:", "Height:", "Balances:", "Fee:"});
+                                QString listBoxItemText = "";
+                                tmpList[2] = tmpList[2].insert(tmpList[2].length() - 8, '.');
+                                listBoxItemText.append("BlockType: " + tmpList[0] + "\n");
+                                listBoxItemText.append("Transfer Nr: " + tmpList[1] + "\n");
+                                listBoxItemText.append("Balance: " + tmpList[2] + "\n");
+                                listBoxItemText.append("Fee: " + tmpList[3] + "\n");
 
+                                QStringList currentAmount = tmpList[2].split(":");
+                                double amountTransfered = 0;
+                                if(currentAmount[0].contains("LYR")) {
+                                    amountTransfered = currentAmount[1].toDouble() + tmpList[3].toDouble() - lastAmount;
+                                } else {
+                                    amountTransfered = 0;
+                                }
+                                lastAmount = currentAmount[1].toDouble();
+                                if(amountTransfered < 0) {
+                                    amountTransfered = 0 - amountTransfered;
+                                }
+                                QString amm = QString::asprintf("%.8f", amountTransfered) + "LYR";
+
+                                if(listBoxItemText.contains("OpenAccountWithReceiveTransfer")) {
+                                    item->setIcon(*newIco);
+                                    QStringList ammCur = tmpList[2].split(":");
+                                    listBoxItemText.append("Amount received: " + amm + "\n");
+                                } else if(listBoxItemText.contains("SendTransfer")) {
+                                    item->setIcon(*sendIco);
+                                    listBoxItemText.append("Amount sent: " + amm + "\n");
+                                } else if(listBoxItemText.contains("ReceiveTransfer")) {
+                                    item->setIcon(*receiveIco);
+                                    listBoxItemText.append("Amount received: " + amm + "\n");
+                                } else {
+                                    item->setIcon(*attentionIco);
+                                }
+                                item->setText(listBoxItemText);
+                                item->setEditable(false);
+                                ui->hystoryListView->setStyleSheet("font-weight: bold; color: black; font: bold 12px");
+                                history.insert(0, tmpItemTxt);
+                                modelHistory->insertRow(0, item);
+                            }
+                        }
+                    }
                 } else {
                     dbg("INFO 'Read history': No transaction found.");
                     return false;
@@ -947,7 +1020,7 @@ bool MainWindow::expectResponse(QString *command, QString expectedResponse, QStr
             cnt = timeout / 25;
         }
         tmpData.append(lyraWallLineResponse);
-        dbgWindow->append(lyraWallLineResponse);
+        dbgWindow.append(lyraWallLineResponse);
         lyraWallLineResponse.clear();
         for(QString line : tmpData) {
             if(receivedData != nullptr) {
@@ -1066,46 +1139,20 @@ void MainWindow::updaterev_line() {
     }while(tmp.length() != 0);
 }
 
-void MainWindow::on_actionReceive_triggered()
+void MainWindow::on_hystoryListView_doubleClicked(const QModelIndex &index)
 {
-    on_receivePushButton_clicked();
-}
-
-void MainWindow::on_receivePushButton_clicked()
-{
-    if(showId(&myId)) {
-        idWindow receiveWindow(this, "Receive", myId);
-        receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-        receiveWindow.exec();
-    }
-}
-
-void MainWindow::on_actionSend_triggered()
-{
-    on_sendPushButton_clicked();
-}
-
-void MainWindow::on_sendPushButton_clicked()
-{
-    send sendWindow(this, myBalance);
-    sendWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-    sendWindow.exec();
-    if(sendWindow.getSend()) {
-        initProgress("Operation in progress...");
-        sendCoins(sendWindow.getId(), sendWindow.getValue());
-        deleteProgress();
-    }
-}
-
-void MainWindow::on_syncPushButton_clicked()
-{
-    initProgress("Sinchronization in progress...");
-    syncAccount();
-    deleteProgress();
+    QStandardItem *item = modelHistory->item(index.row());
+    QIcon ico = item->icon();
+    historyWindow win(this, history.at(index.row()), "Transaction nr " + QString::number(modelHistory->rowCount() - index.row()) + " details:", &ico);
+    win.exec();
 }
 
 void MainWindow::on_actionNew_Wallet_triggered()
 {
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
     namePassWindow *createWindow = new namePassWindow();
     createWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
     createWindow->exec();
@@ -1123,10 +1170,107 @@ void MainWindow::on_actionNew_Wallet_triggered()
     } else {
         dbg("INFO 'New wallet': Entering wallet name and password for creating new canceled.");
     }
+    cliBusySemaphore = false;
+}
+
+void MainWindow::on_actionLoad_Wallet_triggered()
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    nameWindow *loadWindow = new nameWindow();
+    loadWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    loadWindow->exec();
+    if(loadWindow->getOk()) {
+        walletName = loadWindow->getName();
+        delete loadWindow;
+        password *passwordWindow = new password();
+        passwordWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+        passwordWindow->exec();
+        if(passwordWindow->getAccepted()) {
+            QString pass = passwordWindow->getPass();
+            delete passwordWindow;
+            initProgress("Loading wallet in progress...");
+            if(openWallet(walletName, pass)) {
+                dbg("INFO 'Load wallet': Open wallet successful.");
+            } else {
+                dbg("ERROR'Load wallet': Open wallet error.");
+            }
+            deleteProgress();
+        } else {
+            dbg("INFO 'Load wallet': Entering wallet password for load canceled.");
+        }
+    } else {
+        dbg("INFO 'Load wallet': Entering wallet name for load canceled.");
+    }
+    cliBusySemaphore = false;
+}
+
+
+void MainWindow::on_actionSave_Wallet_triggered()
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    cliBusySemaphore = false;
+}
+
+void MainWindow::on_actionExit_triggered()
+{
+    this->close();
+}
+
+void MainWindow::on_actionReceive_triggered()
+{
+    on_receivePushButton_clicked();
+}
+
+void MainWindow::on_actionSend_triggered()
+{
+    on_sendPushButton_clicked();
+}
+
+void MainWindow::on_actionVote_For_triggered()
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    idWindow receiveWindow(this, "Vote for", nullptr);
+    receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    receiveWindow.exec();
+    if(receiveWindow.getOk()) {
+        voteFor(receiveWindow.getId());
+    } else {
+        dbg("INFO 'Wote for': Entering wallet id for load canceled.");
+    }
+    cliBusySemaphore = false;
+}
+
+void MainWindow::on_actionShow_voted_for_triggered()
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    if(lyraWalletProcess.state() == QProcess::Running) {
+        idWindow receiveWindow(this, "You voted for", myVotedId);
+        receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+        receiveWindow.exec();
+    } else {
+        dbg("INFO 'Show vote for': No wallet opened.");
+    }
+    cliBusySemaphore = false;
 }
 
 void MainWindow::on_actionRecover_from_priv_key_triggered()
 {
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
     namePassWindow *recoverWindow = new namePassWindow();
     recoverWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
     recoverWindow->exec();
@@ -1153,39 +1297,15 @@ void MainWindow::on_actionRecover_from_priv_key_triggered()
     } else {
         dbg("INFO 'Recover wallet': Entering wallet name and password for recovery canceled.");
     }
-}
-
-void MainWindow::on_actionLoad_Wallet_triggered()
-{
-    nameWindow *loadWindow = new nameWindow();
-    loadWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-    loadWindow->exec();
-    if(loadWindow->getOk()) {
-        walletName = loadWindow->getName();
-        delete loadWindow;
-        password *passwordWindow = new password();
-        passwordWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-        passwordWindow->exec();
-        if(passwordWindow->getAccepted()) {
-            QString pass = passwordWindow->getPass();
-            delete passwordWindow;
-            initProgress("Loading wallet in progress...");
-            if(openWallet(walletName, pass)) {
-                dbg("INFO 'Load wallet': Open wallet successful.");
-            } else {
-                dbg("ERROR'Load wallet': Open wallet error.");
-            }
-            deleteProgress();
-        } else {
-            dbg("INFO 'Load wallet': Entering wallet password for load canceled.");
-        }
-    } else {
-        dbg("INFO 'Load wallet': Entering wallet name for load canceled.");
-    }
+    cliBusySemaphore = false;
 }
 
 void MainWindow::on_actionShow_private_key_triggered()
 {
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
     QString key;
     if(showPrivateKey(&key)) {
         pKeyWindow *privateKeyWindow = new pKeyWindow(this, key);
@@ -1193,70 +1313,15 @@ void MainWindow::on_actionShow_private_key_triggered()
         privateKeyWindow->exec();
         delete privateKeyWindow;
     }
-}
-
-void MainWindow::on_actionVote_For_triggered()
-{
-    idWindow receiveWindow(this, "Vote for", nullptr);
-    receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-    receiveWindow.exec();
-    if(receiveWindow.getOk()) {
-        voteFor(receiveWindow.getId());
-    } else {
-        dbg("INFO 'Wote for': Entering wallet name for load canceled.");
-    }
-}
-
-
-void MainWindow::on_actionShow_voted_for_triggered()
-{
-    if(lyraWalletProcess.state() == QProcess::Running) {
-        idWindow receiveWindow(this, "You voted for", myVotedId);
-        receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-        receiveWindow.exec();
-    } else {
-        dbg("INFO 'Show vote for': No wallet opened.");
-    }
-}
-
-void MainWindow::on_actionMainNet_triggered(bool checked)
-{
-    if(checked && network.compare("mainnet")) {
-        ui->actionTestNet->setChecked(false);
-        ui->actionDevNet->setChecked(false);
-        exitCli();
-        fee = 0;
-        myId = "";
-        myVotedId = "";
-        numberOfBlocks = 0;
-        myBalance = 0.0;
-        network = "mainnet";
-    } else {
-        ui->actionMainNet->setChecked(true);
-    }
-    setWinTitle();
-}
-
-void MainWindow::on_actionTestNet_triggered(bool checked)
-{
-    if(checked && network.compare("testnet")) {
-        ui->actionMainNet->setChecked(false);
-        ui->actionDevNet->setChecked(false);
-        exitCli();
-        fee = 0;
-        myId = "";
-        myVotedId = "";
-        numberOfBlocks = 0;
-        myBalance = 0.0;
-        network = "testnet";
-    } else {
-        ui->actionTestNet->setChecked(true);
-    }
-    setWinTitle();
+    cliBusySemaphore = false;
 }
 
 void MainWindow::on_actionDevNet_triggered(bool checked)
 {
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
     if(checked && network.compare("devnet")) {
         ui->actionMainNet->setChecked(false);
         ui->actionTestNet->setChecked(false);
@@ -1271,22 +1336,107 @@ void MainWindow::on_actionDevNet_triggered(bool checked)
         ui->actionDevNet->setChecked(true);
     }
     setWinTitle();
+    cliBusySemaphore = false;
+}
+
+void MainWindow::on_actionTestNet_triggered(bool checked)
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    if(checked && network.compare("testnet")) {
+        ui->actionMainNet->setChecked(false);
+        ui->actionDevNet->setChecked(false);
+        exitCli();
+        fee = 0;
+        myId = "";
+        myVotedId = "";
+        numberOfBlocks = 0;
+        myBalance = 0.0;
+        network = "testnet";
+    } else {
+        ui->actionTestNet->setChecked(true);
+    }
+    setWinTitle();
+    cliBusySemaphore = false;
+}
+
+void MainWindow::on_actionMainNet_triggered(bool checked)
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    if(checked && network.compare("mainnet")) {
+        ui->actionTestNet->setChecked(false);
+        ui->actionDevNet->setChecked(false);
+        exitCli();
+        fee = 0;
+        myId = "";
+        myVotedId = "";
+        numberOfBlocks = 0;
+        myBalance = 0.0;
+        network = "mainnet";
+    } else {
+        ui->actionMainNet->setChecked(true);
+    }
+    setWinTitle();
+    cliBusySemaphore = false;
+}
+
+void MainWindow::on_actionDebug_triggered()
+{
+    dbgWindow.show();
 }
 
 void MainWindow::on_actionAbout_triggered()
 {
-    aboutWindow aboutWindow;
-    aboutWindow.exec();
+    aboutWin.show();
 }
 
-
-void MainWindow::on_actionDebug_triggered()
+void MainWindow::on_receivePushButton_clicked()
 {
-    dbgWindow->show();
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    if(showId(&myId)) {
+        idWindow receiveWindow(this, "Receive", myId);
+        receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+        receiveWindow.exec();
+    }
+    cliBusySemaphore = false;
 }
 
-void MainWindow::on_actionExit_triggered()
+void MainWindow::on_sendPushButton_clicked()
 {
-    this->close();
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    send sendWindow(this, myBalance);
+    sendWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    sendWindow.exec();
+    if(sendWindow.getSend()) {
+        initProgress("Operation in progress...");
+        sendCoins(sendWindow.getId(), sendWindow.getValue());
+        deleteProgress();
+    }
+    cliBusySemaphore = false;
 }
+
+void MainWindow::on_syncPushButton_clicked()
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    initProgress("Sinchronization in progress...");
+    syncAccount();
+    deleteProgress();
+    cliBusySemaphore = false;
+}
+
+
 

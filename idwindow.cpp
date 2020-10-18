@@ -43,7 +43,13 @@ void idWindow::on_selectionButtonBox_accepted()
     ok = true;
 }
 
+void idWindow::on_selectionButtonBox_rejected()
+{
+    ok = false;
+}
+
 void idWindow::on_idLineEdit_textChanged(const QString &arg1)
 {
     id = arg1;
 }
+

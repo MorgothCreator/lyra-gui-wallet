@@ -5,6 +5,10 @@
 
 #define WINDOW_ICO_SMALL       "/resources/ico/window_16x16.png"
 #define COPY_ICO_SMALL         "/resources/ico/copy.png"
+#define ATTENTION_ICO_SMALL    "/resources/ico/attention-small.png"
+#define NEW_ICO_SMALL          "/resources/ico/new-acc-small.png"
+#define SEND_ICO_SMALL         "/resources/ico/send_small.png"
+#define RECEIVE_ICO_SMALL      "/resources/ico/receive_small.png"
 
 #define COPY_FADE_RATIO        (10)
 
