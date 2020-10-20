@@ -1,12 +1,17 @@
 #include <QFocusEvent>
+#include <QIcon>
 #include "namewindow.h"
 #include "ui_namewindow.h"
+#include "def.h"
 
 nameWindow::nameWindow(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::nameWindow)
 {
     ui->setupUi(this);
+
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
+
     ok = false;
 
     ui->nameLineEdit->activateWindow();

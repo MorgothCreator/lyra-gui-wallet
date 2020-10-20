@@ -51,8 +51,8 @@ private:
     bool showId(QString *id);
     bool voteFor(QString id);
     bool showVotedFor();
+    void clearHistory();
     bool readHistory(bool update);
-    //bool updateHistory();
     bool syncAccount();
     void exitCli();
     void initProgress(QString title);

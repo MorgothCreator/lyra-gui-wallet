@@ -1,12 +1,17 @@
 #include <QFocusEvent>
+#include <QIcon>
 #include "send.h"
 #include "ui_send.h"
+#include "def.h"
 
 send::send(QWidget *parent, double myBalance, double fee) :
     QDialog(parent),
     ui(new Ui::send)
 {
     ui->setupUi(this);
+
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
+
     snd = false;
     this->fee = fee;
     this->myBalance = myBalance;

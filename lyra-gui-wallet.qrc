@@ -1,6 +1,10 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
-    <file>resources/ico/window_16x16.png</file>
     <file>resources/ico/copy.png</file>
+    <file>resources/ico/attention-small.png</file>
+    <file>resources/ico/new-acc-small.png</file>
+    <file>resources/ico/receive_small.png</file>
+    <file>resources/ico/send_small.png</file>
+    <file>resources/ico/window_16x16.png</file>
 </qresource>
 </RCC>

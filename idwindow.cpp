@@ -12,7 +12,7 @@ idWindow::idWindow(QWidget *parent, QString title, QString id) :
     this->setWindowTitle(title);
     ui->idLineEdit->setText(id);
     ui->idLineEdit->setStyleSheet("text-align:center");
-    QIcon pllIcon = QIcon(QCoreApplication::applicationDirPath() + COPY_ICO_SMALL);
+    QIcon pllIcon = QIcon(COPY_ICO_SMALL);
     ui->copyPushButton->setIcon(pllIcon);
 
 

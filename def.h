@@ -3,12 +3,12 @@
 
 #include <QtCore>
 
-#define WINDOW_ICO_SMALL       "/resources/ico/window_16x16.png"
-#define COPY_ICO_SMALL         "/resources/ico/copy.png"
-#define ATTENTION_ICO_SMALL    "/resources/ico/attention-small.png"
-#define NEW_ICO_SMALL          "/resources/ico/new-acc-small.png"
-#define SEND_ICO_SMALL         "/resources/ico/send_small.png"
-#define RECEIVE_ICO_SMALL      "/resources/ico/receive_small.png"
+#define WINDOW_ICO_SMALL       ":/resources/ico/window_16x16.png"
+#define COPY_ICO_SMALL         ":/resources/ico/copy.png"
+#define ATTENTION_ICO_SMALL    ":/resources/ico/attention-small.png"
+#define NEW_ICO_SMALL          ":/resources/ico/new-acc-small.png"
+#define SEND_ICO_SMALL         ":/resources/ico/send_small.png"
+#define RECEIVE_ICO_SMALL      ":/resources/ico/receive_small.png"
 
 #define COPY_FADE_RATIO        (10)
 
@@ -39,7 +39,7 @@
 //#define DOTNET_ROOT_PATH       QString("")
 //#endif
 
-#define LYRA_CLI_VERSION       ("1.7.8.0")
+#define LYRA_CLI_VERSION       ("1.7.9.0")
 #define LYRA_CLI_DLD_ADDR      ("https://github.com/LYRA-Block-Lattice/Lyra-Core/releases/download/" + QString(LYRA_CLI_VERSION) + "/lyra.permissionless-" + QString(LYRA_CLI_VERSION) + ".tar.bz2")
 #ifdef Q_OS_OSX
 #define LYRA_CLI_DST_PATH      (execPath)

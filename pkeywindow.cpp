@@ -10,11 +10,12 @@ pKeyWindow::pKeyWindow(QWidget *parent, QString key) :
     ui(new Ui::pKeyWindow)
 {
     ui->setupUi(this);
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
+
     ui->copyToClipboardPushButton->setVisible(key != nullptr);
     ui->privateKeyLineEdit->setReadOnly(key != nullptr);
 
-    QIcon pllIcon = QIcon(QCoreApplication::applicationDirPath() + COPY_ICO_SMALL);
-    ui->copyToClipboardPushButton->setIcon(pllIcon);
+    ui->copyToClipboardPushButton->setIcon(QIcon(COPY_ICO_SMALL));
 
     ui->privateKeyLineEdit->activateWindow();
     // the event object is released then in event loop (?)

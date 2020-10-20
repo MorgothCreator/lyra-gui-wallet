@@ -9,7 +9,7 @@ debugWindow::debugWindow(QWidget *parent) :
     ui(new Ui::debugWindow)
 {
     ui->setupUi(this);
-    QIcon pllIcon = QIcon(QCoreApplication::applicationDirPath() + WINDOW_ICO_SMALL);
+    QIcon pllIcon = QIcon(WINDOW_ICO_SMALL);
     this->setWindowIcon(pllIcon);
 }
 

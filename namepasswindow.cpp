@@ -1,12 +1,17 @@
 #include "ui_namepasswindow.h"
 #include <QFocusEvent>
+#include <QIcon>
 #include "namepasswindow.h"
+#include "def.h"
 
 namePassWindow::namePassWindow(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::namePassWindow)
 {
     ui->setupUi(this);
+
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
+
     ui->wallNameLineEdit->activateWindow();
     // the event object is released then in event loop (?)
     QFocusEvent* eventFocus = new QFocusEvent(QEvent::FocusIn);

@@ -1,12 +1,16 @@
 #include <QFocusEvent>
+#include <QIcon>
 #include "password.h"
 #include "ui_password.h"
+#include "def.h"
 
 password::password(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::password)
 {
     ui->setupUi(this);
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
+
     ui->lineEdit->activateWindow();
     // the event object is released then in event loop (?)
     QFocusEvent* eventFocus = new QFocusEvent(QEvent::FocusIn);

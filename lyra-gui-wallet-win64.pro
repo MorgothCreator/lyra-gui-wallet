@@ -3,11 +3,12 @@ QT       += network
 
 ICON = myapp.icns
 RC_ICONS = your_icon.ico
-TARGET = lyra-gui-wallet-win64-1.7.8.0-u4
+TARGET = lyra-gui-wallet-win64-1.7.9.0-u2
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
 
+RESOURCES = lyra-gui-wallet.qrc
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.

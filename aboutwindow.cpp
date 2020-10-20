@@ -9,8 +9,7 @@ aboutWindow::aboutWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    QIcon pllIcon = QIcon(QCoreApplication::applicationDirPath() + WINDOW_ICO_SMALL);
-    this->setWindowIcon(pllIcon);
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
 }
 
 aboutWindow::~aboutWindow()

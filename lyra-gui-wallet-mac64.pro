@@ -22,7 +22,7 @@ CONFIG += c++11
 CONFIG-=app_bundle
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
-# RESOURCES     = lyra-gui-wallet.qrc
+RESOURCES     = lyra-gui-wallet.qrc
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -41,6 +41,7 @@ SOURCES += \
     mainwindow.cpp \
     password.cpp \
     idwindow.cpp \
+    responseparse.cpp \
     send.cpp \
     pkeywindow.cpp
 
@@ -56,6 +57,7 @@ HEADERS += \
     mainwindow.h \
     password.h \
     idwindow.h \
+    responseparse.h \
     send.h \
     pkeywindow.h
 
@@ -84,9 +86,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 DISTFILES += \
     lyra-gui-wallet.ts \
-    resources/ico/copy.png \
-    resources/ico/window_128x128.png \
-    resources/ico/window_16x16.png \
-    resources/ico/window_256x256.png \
-    resources/ico/window_32x32.png \
-    resources/ico/window_64x64.png
+    resources/ico/attention-small.png \
+    resources/ico/new-acc-small.png \
+    resources/ico/receive_small.png \
+    resources/ico/send_small.png \
+    resources/ico/window_16x16.png

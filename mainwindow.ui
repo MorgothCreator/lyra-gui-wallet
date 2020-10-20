@@ -28,6 +28,10 @@
   <property name="windowTitle">
    <string/>
   </property>
+  <property name="windowIcon">
+   <iconset resource="lyra-gui-wallet.qrc">
+    <normaloff>:/resources/ico/window_16x16.png</normaloff>:/resources/ico/window_16x16.png</iconset>
+  </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
   </property>
@@ -361,6 +365,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="lyra-gui-wallet.qrc"/>
+ </resources>
  <connections/>
 </ui>

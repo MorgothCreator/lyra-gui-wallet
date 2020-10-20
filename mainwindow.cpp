@@ -38,13 +38,12 @@ MainWindow::MainWindow(QWidget *parent)
 #else
     execPath = QCoreApplication::applicationDirPath();
 #endif
-    QIcon windowIco = QIcon(execPath + WINDOW_ICO_SMALL);
-    this->setWindowIcon(windowIco);
+    this->setWindowIcon(QIcon(WINDOW_ICO_SMALL));
 
-    attentionIco = new QIcon(execPath + ATTENTION_ICO_SMALL);
-    newIco = new QIcon(execPath + NEW_ICO_SMALL);
-    sendIco = new QIcon(execPath + SEND_ICO_SMALL);
-    receiveIco = new QIcon(execPath + RECEIVE_ICO_SMALL);
+    attentionIco = new QIcon(ATTENTION_ICO_SMALL);
+    newIco = new QIcon(NEW_ICO_SMALL);
+    sendIco = new QIcon(SEND_ICO_SMALL);
+    receiveIco = new QIcon(RECEIVE_ICO_SMALL);
 
 
     fee = 0;
@@ -82,6 +81,18 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    if(loadWalletProgress) {
+        delete loadWalletProgress;
+    }
+    delete attentionIco;
+    delete newIco;
+    delete sendIco;
+    delete receiveIco;
+    if(modelHistory) {
+        delete modelHistory;
+    }
+    dbgWindow.close();
+
     if(lyraWalletProcess.state() == QProcess::Running) {
         exitCli();
     }
@@ -517,8 +528,8 @@ void MainWindow::setWinTitle() {
 bool MainWindow::createWallet(QString name, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         dbg("INFO 'New wallet': LYRA CLI found open, now we wil close it to open another instance.");
-        exitCli();
     }
+    exitCli();
     QString program = DOTNET_ROOT_PATH + "dotnet";
     QStringList arguments;
     arguments << execPath + "/lyra/cli/lyra.dll" << "--networkid" << network << "-p" << "webapi";
@@ -546,7 +557,8 @@ bool MainWindow::createWallet(QString name, QString pass) {
                     loadWalletProgress->setValue(4);
                     set = pass + "\n";
                     QStringList rec;
-                    if(expectResponse(&set, walletName, &rec, 5000)) {
+                    expectResponse(&set, walletName, &rec, 10000);
+                    if(expectResponse(&set, walletName, &rec, 10000)) {
                         dbg(QString("INFO 'New wallet': ") + "'" + name + "' LYRA wallet successfully opened.");
                         loadWalletProgress->setValue(5);
                         for(QString line : rec) {
@@ -596,8 +608,8 @@ bool MainWindow::createWallet(QString name, QString pass) {
 bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         dbg("INFO 'New wallet': LYRA CLI found open, now we wil close it to open another instance.");
-        exitCli();
     }
+    exitCli();
     QString program = DOTNET_ROOT_PATH + "dotnet";
     QStringList arguments;
     arguments << execPath + "/lyra/cli/lyra.dll" << "--networkid" << network << "-p" << "webapi";
@@ -675,8 +687,8 @@ bool MainWindow::recoverWallet(QString name, QString key, QString pass) {
 bool MainWindow::openWallet(QString name, QString pass) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         dbg("INFO 'New wallet': LYRA CLI found open, now we wil close it to open another instance.");
-        exitCli();
     }
+    exitCli();
     QString program = DOTNET_ROOT_PATH + "dotnet";
     QStringList arguments;
     arguments << execPath + "/lyra/cli/lyra.dll" << "--networkid" << network << "-p" << "webapi";
@@ -710,8 +722,8 @@ bool MainWindow::openWallet(QString name, QString pass) {
                     loadWalletProgress->setValue(4);
                     QStringList rec;
                     //set = "";
-                    expectResponse(nullptr, walletName, &rec, 5000);
-                    expectResponse(nullptr, walletName, &rec, 5000);
+                    expectResponse(nullptr, walletName, &rec, 10000);
+                    expectResponse(nullptr, walletName, &rec, 10000);
                     loadWalletProgress->setValue(5);
                     dbg("INFO 'Open wallet': " + name + " LYRA wallet successfully opened.");
                     for(QString line : rec) {
@@ -803,7 +815,7 @@ bool MainWindow::syncAccount() {
         loadWalletProgress->setMaximum(2);
         loadWalletProgress->setValue(0);
         loadWalletProgress->setWindowTitle(tr("Sincyng account..."));
-        dbg("INFO 'Sync account': Sync in progress." + set);
+        dbg("INFO 'Sync account': Sync in progress.");
         if(expectResponse(&set, QString("Sync Result: Success"), nullptr, 10000)) {
             loadWalletProgress->setValue(1);
             dbg("INFO 'Sync account': Sync successfull.");
@@ -862,7 +874,7 @@ bool MainWindow::showId(QString *id) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         QString set = "id\n";
         QStringList rec;
-        expectResponse(&set, walletName, &rec, 1000);
+        expectResponse(&set, walletName, &rec, 5000);
         if(rec.count() == 2) {
             *id = rec[0];
         } else {
@@ -880,7 +892,7 @@ bool MainWindow::voteFor(QString id) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         QString set = "votefor\n";
         QStringList rec;
-        if(expectResponse(&set, "Please", &rec, 1000)) {
+        if(expectResponse(&set, "Please", &rec, 5000)) {
             set = id + "\n";
             if(expectResponse(&set, id, &rec, 5000) && rec.count() == 2) {
                 QString tmp;
@@ -907,7 +919,7 @@ bool MainWindow::readHistory(bool update) {
     if(lyraWalletProcess.state() == QProcess::Running) {
         QString set = "count\n";
         QStringList rec;
-        expectResponse(&set, walletName, &rec, 500);
+        expectResponse(&set, walletName, &rec, 10000);
         if(rec.count() == 2) {
             bool ok = false;
             int count = rec[0].remove("\n").remove("\r").toUInt(&ok);
@@ -924,7 +936,7 @@ bool MainWindow::readHistory(bool update) {
                     }
                     for(int cnt = modelHistory->rowCount() + 1; cnt <= count; cnt++) {
                         set = "print\n";
-                        if(expectResponse(&set, QString("Please enter transaction block index"), nullptr, 1000)) {
+                        if(expectResponse(&set, QString("Please enter transaction block index"), nullptr, 5000)) {
                             set = QString::number(cnt) + "\n";
                             rec.clear();
                             expectResponse(&set, walletName, &rec, 5000);
@@ -981,11 +993,17 @@ bool MainWindow::readHistory(bool update) {
                     return false;
                 }
             } else {
-                dbg("ERROR 'Read history': Invalid response.");
+                dbg("ERROR 'Read history': Invalid response/ invalid count:");
+                for(QString line : rec) {
+                    dbg("ERROR 'Read history': " + line);
+                }
                 return false;
             }
         } else {
-            dbg("ERROR 'Read history': Invalid response.");
+            dbg("ERROR 'Read history': Invalid response:");
+            for(QString line : rec) {
+                dbg("ERROR 'Read history': " + line);
+            }
             return false;
         }
     }
@@ -993,12 +1011,22 @@ bool MainWindow::readHistory(bool update) {
     return true;
 }
 
+void MainWindow::clearHistory() {
+    if(modelHistory) {
+        delete modelHistory;
+    }
+    lastAmount = 0;
+    history.clear();
+    modelHistory = new QStandardItemModel(0, 2, this);
+    ui->hystoryListView->setModel(modelHistory);
+}
+
 bool MainWindow::expectResponse(QString *command, QString expectedResponse, QStringList *receivedData, int timeout){
     lyraWallLineResponse.clear();
     if(command != nullptr && command->length() != 0) {
         lyraWalletProcess.write(command->toUtf8());
     }
-    int cnt = timeout / 25;
+    int cnt = timeout;
     QStringList tmpData;
     while(1) {
         if(!cnt) {
@@ -1013,11 +1041,11 @@ bool MainWindow::expectResponse(QString *command, QString expectedResponse, QStr
                 return false;
             }
         }
-        QThread::msleep(25);
+        QThread::msleep(1);
         QApplication::processEvents();
         cnt--;
         if(lyraWallLineResponse.count()) {
-            cnt = timeout / 25;
+            cnt = timeout;
         }
         tmpData.append(lyraWallLineResponse);
         dbgWindow.append(lyraWallLineResponse);
@@ -1035,28 +1063,40 @@ bool MainWindow::expectResponse(QString *command, QString expectedResponse, QStr
 }
 
 void MainWindow::exitCli() {
+    fee = 0;
+    myId = "";
+    myVotedId = "";
+    numberOfBlocks = 0;
+    myBalance = 0.0;
     ui->balanceLabel->setText(QString::asprintf("%.8f", 0.0) + " LYR");
     lyraWalletProcess.write(QString("stop\n").toUtf8());
+    clearHistory();
 
     int cnt = 0;
-    while(lyraWalletProcess.state() == QProcess::Running) {
-        QEventLoop loop;
-        QTimer::singleShot(250, &loop, SLOT(quit()));
-        loop.exec();
-        if(cnt == 10) {
-            lyraWalletProcess.kill();
+    if(lyraWalletProcess.state() == QProcess::Running) {
+        while(lyraWalletProcess.state() == QProcess::Running) {
             QEventLoop loop;
-            QTimer::singleShot(2000, &loop, SLOT(quit()));
+            QTimer::singleShot(250, &loop, SLOT(quit()));
             loop.exec();
-            dbg("ERROR 'Exit CLI': LYRA CLI killed.");
-            return;
+            if(cnt == 10) {
+                lyraWalletProcess.kill();
+                QEventLoop loop;
+                QTimer::singleShot(2000, &loop, SLOT(quit()));
+                loop.exec();
+                dbg("ERROR 'Exit CLI': LYRA CLI killed.");
+                while(lyraWalletProcess.state() == QProcess::Running) {
+                    QThread::sleep(1);
+                    dbg("ERROR 'Exit CLI': Wait for LYRA CLI to be killed.");
+                }
+                return;
+            }
+            cnt++;
         }
-        cnt++;
+        lyraWalletProcess.waitForFinished();
+        while(lyraWalletProcess.state() == QProcess::Running);
+        lyraWalletProcess.close();
+        dbg(lyraWalletProcess.readAll());
     }
-    lyraWalletProcess.waitForFinished();
-    while(lyraWalletProcess.state() == QProcess::Running);
-    lyraWalletProcess.close();
-    dbg(lyraWalletProcess.readAll());
 }
 
 bool MainWindow::getConfig(QString name, QString &response) {
@@ -1306,12 +1346,16 @@ void MainWindow::on_actionShow_private_key_triggered()
         return;
     }
     cliBusySemaphore = true;
-    QString key;
-    if(showPrivateKey(&key)) {
-        pKeyWindow *privateKeyWindow = new pKeyWindow(this, key);
-        privateKeyWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-        privateKeyWindow->exec();
-        delete privateKeyWindow;
+    if(lyraWalletProcess.state() == QProcess::Running) {
+        QString key;
+        if(showPrivateKey(&key)) {
+            pKeyWindow *privateKeyWindow = new pKeyWindow(this, key);
+            privateKeyWindow->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+            privateKeyWindow->exec();
+            delete privateKeyWindow;
+        }
+    } else {
+        dbg("INFO 'Show private key': No wallet opened.");
     }
     cliBusySemaphore = false;
 }
