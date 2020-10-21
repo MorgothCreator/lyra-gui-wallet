@@ -43,7 +43,9 @@ SOURCES += \
     idwindow.cpp \
     responseparse.cpp \
     send.cpp \
-    pkeywindow.cpp
+    pkeywindow.cpp \
+    qrcodegen.c \
+    showqr.cpp
 
 HEADERS += \
     aboutwindow.h \
@@ -59,7 +61,9 @@ HEADERS += \
     idwindow.h \
     responseparse.h \
     send.h \
-    pkeywindow.h
+    pkeywindow.h \
+    qrcodegen.h \
+    showqr.h
 
 FORMS += \
     aboutwindow.ui \
@@ -72,7 +76,8 @@ FORMS += \
     password.ui \
     idwindow.ui \
     send.ui \
-    pkeywindow.ui
+    pkeywindow.ui \
+    showqr.ui
 
 TRANSLATIONS += \
     lyra-gui-wallet.ts

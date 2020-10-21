@@ -64,7 +64,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Lyra GUI Wallet 1.7.9.0-u3</string>
+    <string>Lyra GUI Wallet 1.7.9.0-u4</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">

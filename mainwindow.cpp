@@ -20,6 +20,7 @@
 #include "httpdownload.h"
 #include "responseparse.h"
 
+
 #include "def.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -140,6 +141,7 @@ void MainWindow::loadAtStart() {
     setWinTitle();
     cliBusySemaphore = false;
     on_actionLoad_Wallet_triggered();
+
 }
 
 void MainWindow::dbg(QStringList data) {
@@ -1446,16 +1448,16 @@ void MainWindow::on_actionAbout_triggered()
 
 void MainWindow::on_receivePushButton_clicked()
 {
-    if(cliBusySemaphore) {
+    /*if(cliBusySemaphore) {
         return;
     }
-    cliBusySemaphore = true;
-    if(showId(&myId)) {
+    cliBusySemaphore = true;*/
+    //if(showId(&myId)) {
         idWindow receiveWindow(this, "Receive", myId);
         receiveWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
         receiveWindow.exec();
-    }
-    cliBusySemaphore = false;
+    //}
+    //cliBusySemaphore = false;
 }
 
 void MainWindow::on_sendPushButton_clicked()

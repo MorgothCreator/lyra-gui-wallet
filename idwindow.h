@@ -36,6 +36,7 @@ private slots:
     void on_selectionButtonBox_accepted();
     void on_idLineEdit_textChanged(const QString &arg1);
     void on_selectionButtonBox_rejected();
+    void on_showQrPushButton_clicked();
 };
 
 #endif // RECEIVE_H

@@ -2,6 +2,7 @@
 #include "idwindow.h"
 #include "ui_idwindow.h"
 #include "def.h"
+#include "showqr.h"
 
 idWindow::idWindow(QWidget *parent, QString title, QString id) :
     QDialog(parent),
@@ -53,3 +54,9 @@ void idWindow::on_idLineEdit_textChanged(const QString &arg1)
     id = arg1;
 }
 
+void idWindow::on_showQrPushButton_clicked()
+{
+    showqr qrWindow(this, ui->idLineEdit->text());
+    //qrWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    qrWindow.exec();
+}

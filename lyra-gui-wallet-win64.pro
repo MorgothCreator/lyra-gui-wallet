@@ -28,7 +28,9 @@ SOURCES += \
     idwindow.cpp \
     responseparse.cpp \
     send.cpp \
-    pkeywindow.cpp
+    pkeywindow.cpp \
+    qrcodegen.c \
+    showqr.cpp
 
 HEADERS += \
     aboutwindow.h \
@@ -44,7 +46,9 @@ HEADERS += \
     idwindow.h \
     responseparse.h \
     send.h \
-    pkeywindow.h
+    pkeywindow.h \
+    qrcodegen.h \
+    showqr.h
 
 FORMS += \
     aboutwindow.ui \
@@ -57,7 +61,8 @@ FORMS += \
     password.ui \
     idwindow.ui \
     send.ui \
-    pkeywindow.ui
+    pkeywindow.ui \
+    showqr.ui
 
 
 TRANSLATIONS += \
@@ -74,9 +79,5 @@ DISTFILES += \
     resources/ico/new-acc-small.png \
     resources/ico/receive_small.png \
     resources/ico/send_small.png \
-    resources/ico/window_128x128.png \
-    resources/ico/window_16x16.png \
-    resources/ico/window_256x256.png \
-    resources/ico/window_32x32.png \
-    resources/ico/window_64x64.png
+    resources/ico/window_16x16.png
 
