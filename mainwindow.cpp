@@ -81,9 +81,9 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    if(loadWalletProgress) {
+    /*if(loadWalletProgress) {
         delete loadWalletProgress;
-    }
+    }*/
     delete attentionIco;
     delete newIco;
     delete sendIco;
@@ -1012,9 +1012,9 @@ bool MainWindow::readHistory(bool update) {
 }
 
 void MainWindow::clearHistory() {
-    if(modelHistory) {
+    /*if(modelHistory) {
         delete modelHistory;
-    }
+    }*/
     lastAmount = 0;
     history.clear();
     modelHistory = new QStandardItemModel(0, 2, this);
@@ -1069,15 +1069,18 @@ void MainWindow::exitCli() {
     numberOfBlocks = 0;
     myBalance = 0.0;
     ui->balanceLabel->setText(QString::asprintf("%.8f", 0.0) + " LYR");
-    lyraWalletProcess.write(QString("stop\n").toUtf8());
     clearHistory();
+    dbgWindow.close();
 
     int cnt = 0;
     if(lyraWalletProcess.state() == QProcess::Running) {
+        QString send("stop\n");
+        expectResponse(&send, QString("LYRA Block Lattice Client is shutting down"), nullptr, 2000);
         while(lyraWalletProcess.state() == QProcess::Running) {
-            QEventLoop loop;
-            QTimer::singleShot(250, &loop, SLOT(quit()));
-            loop.exec();
+            //QEventLoop loop;
+            //QTimer::singleShot(250, &loop, SLOT(quit()));
+            //loop.exec();
+            QThread::msleep(250);
             if(cnt == 10) {
                 lyraWalletProcess.kill();
                 QEventLoop loop;
@@ -1096,6 +1099,8 @@ void MainWindow::exitCli() {
         while(lyraWalletProcess.state() == QProcess::Running);
         lyraWalletProcess.close();
         dbg(lyraWalletProcess.readAll());
+    } else {
+        dbg("INFO 'Exit CLI': CLI process already closed.");
     }
 }
 

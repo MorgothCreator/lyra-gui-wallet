@@ -9,7 +9,7 @@ unix:{
 
 ICON = myapp.icns
 RC_ICONS = your_icon.ico
-TARGET = lyra-gui-wallet-ubuntu64-1.7.9.0-u2
+TARGET = lyra-gui-wallet
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
