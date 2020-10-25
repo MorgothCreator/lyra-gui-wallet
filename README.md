@@ -45,5 +45,9 @@ When you switch networks, if a wallet is opened at the moment of switch, the ope
 There is a debug window that can be opened at any time and see debug information and information's given by the CLI, the debug window will be erased only when you close the GUI interface.
 
 
+
+![LYRA GUY non official wallet](https://raw.githubusercontent.com/MorgothCreator/lyra-gui-wallet/master/LYRA%20GUY%20non%20official%20wallet.png)
+
+
 ### Donations kindly apreciated:
 ##### LYR: LCjM28ov1MciT8cd5TmSAiMgiLhSgXhYPUB6mWuqK3ZD8S5axLCtyihxkh5YZFpgbWML7WrC1d7sLLtaCbmT7YqX24ipZo
