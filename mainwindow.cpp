@@ -128,13 +128,13 @@ void MainWindow::loadAtStart() {
     }
     /* Force install, only for debug purposes. */
     //installSdk();
-    if(!checkLyraCli()) {
-            QMessageBox::critical(this, tr("ERROR"),
-                tr("LYRA CLI wallet can not run without\n\r Downloading it.\n\r\n\r This GUI will start for demonstration only."));
-            setWinTitle();
-            this->setEnabled(true);
-            return;
-        }
+    if(!checkLyraCli("")) {
+        QMessageBox::critical(this, tr("ERROR"),
+            tr("LYRA CLI wallet can not run without\n\r Downloading it.\n\r\n\r This GUI will start for demonstration only."));
+        setWinTitle();
+        this->setEnabled(true);
+        return;
+    }
     /* Force install, only for debug purposes. */
     // installLyraCli();
 
@@ -300,7 +300,7 @@ bool MainWindow::checkNetSdk() {
             dbg("INFO 'Check .NET Core': NET SDK Version: " + line.remove("\r"));
         }
         if(sdkCliRead.contains("3.1")) {
-            dbg("INFO 'Check .NET Core': NET SDK 3.1 found.");
+            dbg("INFO 'Check .NET Core': NET SDK Version: 3.1.x found.");
         } else {
             return installSdk();
         }
@@ -313,10 +313,10 @@ bool MainWindow::checkNetSdk() {
 bool MainWindow::installLyraCli() {
     //if(getSizeEqual(this,))
     httpDownload sdkDownload(this);
-    if(!sdkDownload.getSizeEqual(new QString(DEPENDENCY_DIR + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
+    if(!sdkDownload.getSizeEqual(new QString(DEPENDENCY_DIR + QString(LYRA_PACKAGE_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
         dbg("INFO 'Download LYRA CLI': LYRA CLI wallet archive not found.");
         dbg("INFO 'Download LYRA CLI': Proceed to download LYRA CLI wallet.");
-        if(!sdkDownload.download(QString("Download lyra.permissionless-" + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(DEPENDENCY_DIR + QString(LYRA_CLI_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
+        if(!sdkDownload.download(QString("Download lyra.permissionless-" + QString(LYRA_PACKAGE_VERSION) + ".tar.bz2"), new QString(DEPENDENCY_DIR + QString(LYRA_PACKAGE_VERSION) + ".tar.bz2"), new QString(LYRA_CLI_DLD_ADDR))) {
             dbg("ERROR 'Download LYRA CLI': Downloading LYRA CLI archive.");
             return false;
         } else {
@@ -329,7 +329,7 @@ bool MainWindow::installLyraCli() {
     QString program = "tar";
     QStringList arguments;
     arguments << "-xvjf";
-    arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar.bz2";
+    arguments << DEPENDENCY_DIR + LYRA_PACKAGE_VERSION + ".tar.bz2";
     arguments << "-C";
     arguments << LYRA_CLI_DST_PATH;
     //lyraWalletProcess.setParent(this);
@@ -355,7 +355,7 @@ bool MainWindow::installLyraCli() {
     QString program = DEPENDENCY_DIR + ARCHIVER_NAME;
     QStringList arguments;
     arguments << "x";
-    arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar.bz2";
+    arguments << DEPENDENCY_DIR + LYRA_PACKAGE_VERSION + ".tar.bz2";
     arguments << "-aoa";
     arguments << "-o" + DEPENDENCY_DIR;
     lyraWalletProcess.setParent(this);
@@ -369,7 +369,7 @@ bool MainWindow::installLyraCli() {
         lyraWalletProcess.close();
         arguments.clear();
         arguments << "x";
-        arguments << DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar";
+        arguments << DEPENDENCY_DIR + LYRA_PACKAGE_VERSION + ".tar";
         arguments << "-aoa";
         arguments << "-o" + LYRA_CLI_DST_PATH;
         lyraWalletProcess.start(program, arguments);
@@ -379,7 +379,7 @@ bool MainWindow::installLyraCli() {
                 QApplication::processEvents();
             }
             lyraWalletProcess.close();
-            QFile fil(DEPENDENCY_DIR + LYRA_CLI_VERSION + ".tar");
+            QFile fil(DEPENDENCY_DIR + LYRA_PACKAGE_VERSION + ".tar");
             fil.remove();
             dbg("INFO 'Decompress LYRA CLI': LYRA CLI wallet extracted.");
         } else {
@@ -397,8 +397,12 @@ bool MainWindow::installLyraCli() {
     return true;
 }
 
-bool MainWindow::checkLyraCli() {
+bool MainWindow::checkLyraCli(QString version) {
+#if defined(Q_OS_WIN32)
+    if(!QFile::exists(DOTNET_ROOT_PATH + "dotnet.exe")) {
+#else
     if(!QFile::exists(DOTNET_ROOT_PATH + "dotnet")) {
+#endif
         dbg("ERROT 'Check LYRA CLI': .NET SDK does not exist at the desired location.");
         checkNetSdk();
     } else {
@@ -420,16 +424,25 @@ bool MainWindow::checkLyraCli() {
     lyraWalletProcess.start(program, arguments);
     if(lyraWalletProcess.waitForStarted(2000)) {
         lyraWalletProcess.waitForFinished();
-        QString sdkCliRead = lyraWalletProcess.readAll();
+        QString lyraCliRead = lyraWalletProcess.readAll();
         lyraWalletProcess.close();
         exitCli();
-        QStringList sdkVersions = sdkCliRead.split("\n");
+        QStringList sdkVersions = lyraCliRead.split("\n");
         sdkVersions.removeAll("");
+        QString currentVersion;
         for(QString line : sdkVersions) {
-            dbg("INFO 'Check LYRA CLI': LYRA CLI version: " + line.remove("\r"));
+            if(line.contains("Version: ")) {
+                currentVersion = line.mid(9);
+            }
         }
-        if(sdkCliRead.contains("LYRA Block Lattice Command Line Client")) {
-            dbg("INFO 'Check LYRA CLI': LYRA CLI version: " + QString(LYRA_CLI_VERSION) + " found.");
+        currentVersion.replace("\r", "");
+        if(lyraCliRead.contains("LYRA Block Lattice Command Line Client")) {
+            dbg("INFO 'Check LYRA CLI': LYRA package version: " + QString(LYRA_PACKAGE_VERSION) + " found.");
+            dbg("INFO 'Check LYRA CLI': LYRA CLI version: " + currentVersion + " found.");
+            if(currentVersion.compare(LYRA_CLI_VERSION)) {
+                dbg("INFO 'Check LYRA CLI': LYRA CLI version: " + currentVersion + " found, update to: " + QString(LYRA_CLI_VERSION));
+                return installLyraCli();
+            }
         } else {
             return installLyraCli();
         }
@@ -950,7 +963,9 @@ bool MainWindow::readHistory(bool update) {
                                 }
                                 QStringList tmpList = responseParse::print(tmpItemTxt, {"BlockType:", "Height:", "Balances:", "Fee:"});
                                 QString listBoxItemText = "";
-                                tmpList[2] = tmpList[2].insert(tmpList[2].length() - 8, '.');
+                                if(tmpList[2].compare("LYR:0")) {
+                                    tmpList[2] = tmpList[2].insert(tmpList[2].length() - 8, '.');
+                                }
                                 listBoxItemText.append("BlockType: " + tmpList[0] + "\n");
                                 listBoxItemText.append("Transfer Nr: " + tmpList[1] + "\n");
                                 listBoxItemText.append("Balance: " + tmpList[2] + "\n");
@@ -1491,3 +1506,13 @@ void MainWindow::on_syncPushButton_clicked()
 
 
 
+
+void MainWindow::on_actionUpdate_triggered()
+{
+    if(cliBusySemaphore) {
+        return;
+    }
+    cliBusySemaphore = true;
+    checkLyraCli("");
+    cliBusySemaphore = false;
+}

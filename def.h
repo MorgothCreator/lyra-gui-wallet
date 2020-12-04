@@ -39,8 +39,9 @@
 //#define DOTNET_ROOT_PATH       QString("")
 //#endif
 
-#define LYRA_CLI_VERSION       ("1.7.9.0")
-#define LYRA_CLI_DLD_ADDR      ("https://github.com/LYRA-Block-Lattice/Lyra-Core/releases/download/" + QString(LYRA_CLI_VERSION) + "/lyra.permissionless-" + QString(LYRA_CLI_VERSION) + ".tar.bz2")
+#define LYRA_PACKAGE_VERSION   ("1.7.11.6")
+#define LYRA_CLI_VERSION       ("1.5.0")
+#define LYRA_CLI_DLD_ADDR      ("https://github.com/LYRA-Block-Lattice/Lyra-Core/releases/download/" + QString(LYRA_PACKAGE_VERSION) + "/lyra.permissionless-" + QString(LYRA_PACKAGE_VERSION) + ".tar.bz2")
 #ifdef Q_OS_OSX
 #define LYRA_CLI_DST_PATH      (execPath)
 #else

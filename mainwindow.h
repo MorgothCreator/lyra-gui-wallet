@@ -35,7 +35,7 @@ private:
     bool installSdk();
     bool checkNetSdk();
     bool installLyraCli();
-    bool checkLyraCli();
+    bool checkLyraCli(QString version);
     bool installSsl();
     bool installCppRedistForSsl();
     void setWinTitle();
@@ -113,5 +113,6 @@ private slots:
     void on_actionShow_voted_for_triggered();
     void on_hystoryListView_doubleClicked(const QModelIndex &index);
     void on_actionSave_Wallet_triggered();
+    void on_actionUpdate_triggered();
 };
 #endif // MAINWINDOW_H
