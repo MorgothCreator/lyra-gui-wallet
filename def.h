@@ -39,7 +39,7 @@
 //#define DOTNET_ROOT_PATH       QString("")
 //#endif
 
-#define LYRA_PACKAGE_VERSION   ("1.7.11.6")
+#define LYRA_PACKAGE_VERSION   ("2.1.0.0")
 #define LYRA_CLI_VERSION       ("1.5.0")
 #define LYRA_CLI_DLD_ADDR      ("https://github.com/LYRA-Block-Lattice/Lyra-Core/releases/download/" + QString(LYRA_PACKAGE_VERSION) + "/lyra.permissionless-" + QString(LYRA_PACKAGE_VERSION) + ".tar.bz2")
 #ifdef Q_OS_OSX
@@ -55,9 +55,11 @@
 #endif
 
 #ifdef Q_OS_UNIX
-#define endLine        endl
+#define endLine                 endl
 #elif defined(Q_OS_WIN32)
-#define endLine        Qt::endl
+#define endLine                 Qt::endl
 #endif
+
+#define COIN_TABLE_MAX_SIZE     1024
 
 #endif // DEF_H

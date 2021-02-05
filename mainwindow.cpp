@@ -20,9 +20,6 @@
 #include "httpdownload.h"
 #include "responseparse.h"
 
-
-#include "def.h"
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -783,12 +780,13 @@ bool MainWindow::openWallet(QString name, QString pass) {
     return true;
 }
 
-bool MainWindow::sendCoins(QString id, double value) {
+bool MainWindow::sendCoins(QString id, double value, QString coin) {
     if(lyraWalletProcess.state() == QProcess::Running) {
+        syncAccount();
         QString set = "send\n";
         loadWalletProgress->setMaximum(2);
         loadWalletProgress->setValue(0);
-        loadWalletProgress->setWindowTitle(tr("Sending LYR coins..."));
+        loadWalletProgress->setWindowTitle(tr("Sending ") + coin + tr(" coins..."));
         if(expectResponse(&set, QString("Please enter destination account id"), nullptr, 5000)) {
             loadWalletProgress->setValue(1);
             set = id + "\n";
@@ -802,9 +800,18 @@ bool MainWindow::sendCoins(QString id, double value) {
                     set = set.replace(".", ",");
                 }
 #endif
+                int tokensWithBalance = 0;
+                for (int cnt = 0; cnt < tokensNr; cnt++) {
+                    if(lastAmount[cnt] != 0.0)
+                        tokensWithBalance++;
+                }
+                if(tokensWithBalance > 1) {
+                    expectResponse(&set, QString("Please select token to send, or press Enter for LYR"), nullptr, 2000);
+                    set = coin + "\n";
+                }
                 dbg("INFO 'Send coins': Coins sending:" + set);
                 if(expectResponse(&set, QString("Send Transfer block has been authorized successfully"), nullptr, 10000)) {
-                    dbg(QString("INFO '': Coins send: ") + QString::asprintf("%.8f", value) + QString("LYR, to id: ") + id);
+                    dbg(QString("INFO '': Coins send: ") + QString::asprintf("%.8f", value) + QString(coin + ", to id: ") + id);
                     syncAccount();
                 } else {
                     dbg("ERROR 'Send coins': Invalid value.");
@@ -944,7 +951,10 @@ bool MainWindow::readHistory(bool update) {
                         if(modelHistory) {
                             delete modelHistory;
                         }
-                        lastAmount = 0;
+                        for (int cnt = 0; cnt < COIN_TABLE_MAX_SIZE; cnt++) {
+                            lastAmount[cnt] = 0;
+                            lastAmountName[cnt] = "";
+                        }
                         history.clear();
                         modelHistory = new QStandardItemModel(0, 2, this);
                         ui->hystoryListView->setModel(modelHistory);
@@ -963,26 +973,75 @@ bool MainWindow::readHistory(bool update) {
                                 }
                                 QStringList tmpList = responseParse::print(tmpItemTxt, {"BlockType:", "Height:", "Balances:", "Fee:"});
                                 QString listBoxItemText = "";
-                                if(tmpList[2].compare("LYR:0")) {
-                                    tmpList[2] = tmpList[2].insert(tmpList[2].length() - 8, '.');
-                                }
                                 listBoxItemText.append("BlockType: " + tmpList[0] + "\n");
                                 listBoxItemText.append("Transfer Nr: " + tmpList[1] + "\n");
-                                listBoxItemText.append("Balance: " + tmpList[2] + "\n");
-                                listBoxItemText.append("Fee: " + tmpList[3] + "\n");
+                                QStringList coinList = tmpList[2].split(",");
+                                tokensNr = coinList.count();
+                                QStringList currentAmount;// = tmpList[2].split(":");
+                                for (QString coin : coinList ) {
+                                    QStringList currentAmountTmp = coin.split(":");
+                                    if(currentAmountTmp[1].length() > 8)
+                                        coin = coin.insert(coin.length() - 8, '.');
+                                    listBoxItemText.append("Balance: " + coin + "\n");
+                                    currentAmount.append(coin.split(":"));
+                                }
+                                listBoxItemText.append("Fee: " + tmpList[3] + "LYR\n");
 
-                                QStringList currentAmount = tmpList[2].split(":");
+                                int foundTokenTable = 0;;
+                                int foundTokenCoin = 0;;
+                                bool newToken = true;
+                                int coinCnt = 0;
+                                int tableCnt = 0;
+                                QString amm;
                                 double amountTransfered = 0;
-                                if(currentAmount[0].contains("LYR")) {
-                                    amountTransfered = currentAmount[1].toDouble() + tmpList[3].toDouble() - lastAmount;
-                                } else {
-                                    amountTransfered = 0;
+                                // Check if a there is a new token
+                                for (coinCnt = 0; coinCnt < currentAmount.count() / 2; coinCnt++) {
+                                    newToken = true;
+                                    for (tableCnt = 0; tableCnt < COIN_TABLE_MAX_SIZE; tableCnt++) { // Searct coin in table
+                                        if(lastAmountName[tableCnt].length() == 0)
+                                            break;
+                                        if(!currentAmount[coinCnt * 2].compare(lastAmountName[tableCnt])) { // Token match, calculate the value
+                                            newToken = false;
+                                            foundTokenTable = tableCnt;
+                                            foundTokenCoin = coinCnt;
+                                            if(!lastAmountName[tableCnt].compare("LYR"))
+                                                lastAmount[tableCnt] -= tmpList[3].toDouble();
+
+                                            amountTransfered = currentAmount[(coinCnt * 2) + 1].toDouble() - lastAmount[tableCnt];
+                                            lastAmount[tableCnt] = currentAmount[(coinCnt * 2) + 1].toDouble();
+                                            if(amountTransfered < 0.0) {
+                                                amountTransfered = 0.0 - amountTransfered;
+                                            }
+                                            if(amountTransfered != 0.0) {
+                                                amm = QString::asprintf("%.8f", amountTransfered) + currentAmount[coinCnt * 2];
+                                            }
+                                            break;
+                                        }
+                                    }
+                                    if(newToken == true) { // New token detected, initialize it.
+                                        amountTransfered = currentAmount[(coinCnt * 2) + 1].toDouble();
+                                        amm = QString::asprintf("%.8f", amountTransfered) + currentAmount[coinCnt * 2];
+                                        lastAmount[tableCnt] = amountTransfered;
+                                        lastAmountName[tableCnt] = currentAmount[coinCnt * 2];
+                                        newToken = true;
+
+                                        if(!lastAmountName[tableCnt].compare("LYR"))
+                                            lastAmount[tableCnt] -= tmpList[3].toDouble();
+
+                                        amountTransfered = currentAmount[(coinCnt * 2) + 1].toDouble() - lastAmount[tableCnt];
+                                        lastAmount[tableCnt] = currentAmount[(coinCnt * 2) + 1].toDouble();
+                                        if(amountTransfered < 0.0) {
+                                            amountTransfered = 0.0 - amountTransfered;
+                                        }
+                                        if(amountTransfered != 0.0) {
+                                            amm = QString::asprintf("%.8f", amountTransfered) + currentAmount[coinCnt * 2];
+                                        }
+                                        break;
+                                    }
                                 }
-                                lastAmount = currentAmount[1].toDouble();
-                                if(amountTransfered < 0) {
-                                    amountTransfered = 0 - amountTransfered;
-                                }
-                                QString amm = QString::asprintf("%.8f", amountTransfered) + "LYR";
+                                tableCnt = foundTokenTable;
+                                coinCnt = foundTokenCoin;
+
 
                                 if(listBoxItemText.contains("OpenAccountWithReceiveTransfer")) {
                                     item->setIcon(*newIco);
@@ -1032,7 +1091,10 @@ void MainWindow::clearHistory() {
     /*if(modelHistory) {
         delete modelHistory;
     }*/
-    lastAmount = 0;
+    for (int cnt = 0; cnt < COIN_TABLE_MAX_SIZE; cnt++) {
+        lastAmount[cnt] = 0;
+        lastAmountName[cnt] = "";
+    }
     history.clear();
     modelHistory = new QStandardItemModel(0, 2, this);
     ui->hystoryListView->setModel(modelHistory);
@@ -1284,16 +1346,6 @@ void MainWindow::on_actionExit_triggered()
     this->close();
 }
 
-void MainWindow::on_actionReceive_triggered()
-{
-    on_receivePushButton_clicked();
-}
-
-void MainWindow::on_actionSend_triggered()
-{
-    on_sendPushButton_clicked();
-}
-
 void MainWindow::on_actionVote_For_triggered()
 {
     if(cliBusySemaphore) {
@@ -1398,6 +1450,7 @@ void MainWindow::on_actionDevNet_triggered(bool checked)
         numberOfBlocks = 0;
         myBalance = 0.0;
         network = "devnet";
+        this->setWindowTitle(QString::asprintf(MAIN_WINDOW_TITLE, network.toStdString().data()));
     } else {
         ui->actionDevNet->setChecked(true);
     }
@@ -1421,6 +1474,7 @@ void MainWindow::on_actionTestNet_triggered(bool checked)
         numberOfBlocks = 0;
         myBalance = 0.0;
         network = "testnet";
+        this->setWindowTitle(QString::asprintf(MAIN_WINDOW_TITLE, network.toStdString().data()));
     } else {
         ui->actionTestNet->setChecked(true);
     }
@@ -1444,6 +1498,7 @@ void MainWindow::on_actionMainNet_triggered(bool checked)
         numberOfBlocks = 0;
         myBalance = 0.0;
         network = "mainnet";
+        this->setWindowTitle(QString::asprintf(MAIN_WINDOW_TITLE, network.toStdString().data()));
     } else {
         ui->actionMainNet->setChecked(true);
     }
@@ -1481,12 +1536,12 @@ void MainWindow::on_sendPushButton_clicked()
         return;
     }
     cliBusySemaphore = true;
-    send sendWindow(this, myBalance);
+    send sendWindow(this, myBalance, fee, lastAmountName, lastAmount);
     sendWindow.setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
     sendWindow.exec();
     if(sendWindow.getSend()) {
         initProgress("Operation in progress...");
-        sendCoins(sendWindow.getId(), sendWindow.getValue());
+        sendCoins(sendWindow.getId(), sendWindow.getValue(), sendWindow.getCoin());
         deleteProgress();
     }
     cliBusySemaphore = false;

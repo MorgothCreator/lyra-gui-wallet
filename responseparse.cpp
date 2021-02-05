@@ -28,7 +28,10 @@ QStringList responseParse::print(QString text, QStringList item) {
         QStringList splItem = line.split(" ");
         for(QString lineItem : item) {
             if(splItem[0].contains(lineItem)) {
-                retList.append(splItem[1]);
+                if(splItem.count() == 2)
+                    retList.append(splItem[1]);
+                else
+                    retList.append(splItem[1] + splItem[2]);
             }
         }
     }

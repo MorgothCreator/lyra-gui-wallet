@@ -14,6 +14,8 @@
 #include "debugwindow.h"
 #include "aboutwindow.h"
 
+#include "def.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -46,7 +48,7 @@ private:
     bool createWallet(QString name, QString pass);
     bool recoverWallet(QString name, QString key, QString pass);
     bool openWallet(QString name, QString pass);
-    bool sendCoins(QString id, double value);
+    bool sendCoins(QString id, double value, QString coin);
     bool showPrivateKey(QString *key);
     bool showId(QString *id);
     bool voteFor(QString id);
@@ -67,6 +69,7 @@ private:
     QString myVotedId;
     int numberOfBlocks;
     double myBalance;
+    int tokensNr;
     QString err;
     QStringList lyraWallLineResponse;
     QTimer timerInitialize;
@@ -87,7 +90,8 @@ private:
     QIcon *newIco;
     QIcon *sendIco;
     QIcon *receiveIco;
-    double lastAmount;
+    QString lastAmountName[COIN_TABLE_MAX_SIZE];
+    double lastAmount[COIN_TABLE_MAX_SIZE];
 
 private slots:
     void loadAtStart();
@@ -108,8 +112,6 @@ private slots:
     void on_actionExit_triggered();
     void on_actionShow_private_key_triggered();
     void on_actionVote_For_triggered();
-    void on_actionReceive_triggered();
-    void on_actionSend_triggered();
     void on_actionShow_voted_for_triggered();
     void on_hystoryListView_doubleClicked(const QModelIndex &index);
     void on_actionSave_Wallet_triggered();
