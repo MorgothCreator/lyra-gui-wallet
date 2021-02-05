@@ -28,6 +28,12 @@ First time when you run the GUI wallet on a PC you need to open a terminal navig
 
 After first time you can open the wallet directly opening a terminal, navigating to the wallet place and write: "./lyra-gui-wallet-ubuntu64-1.7.8.0-u3".
 
+#### On MacOS 10.13 and up:
+
+There are issues in satisfying dependency's in order wallet to run ( If someone can fox this, please, you are welcome ), so there is a workaround installing Qt, downloading the Qt online installer, download it and fallow below instructions:
+
+![LYRA GUY non official wallet](https://raw.githubusercontent.com/MorgothCreator/lyra-gui-wallet/master/QtOnMacOs.png)
+
 #### On all platforms:
 
 Only if they are not already downloaded, will download:

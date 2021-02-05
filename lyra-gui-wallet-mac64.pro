@@ -11,11 +11,11 @@ QT       += network
 
 #INCLUDEPATH += "-Wl,-rpath,\'\$$ORIGIN\'"
 
-TARGET = lyra-gui-wallet-macOS-1.7.8.0-u3
+TARGET = lyra-gui-wallet
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 
-QMAKE_CFLAGS_RELEASE = -Os -momit-leaf-frame-pointer
+#QMAKE_CFLAGS_RELEASE = -Os -momit-leaf-frame-pointer
 
 CONFIG += c++11
 
@@ -43,7 +43,9 @@ SOURCES += \
     idwindow.cpp \
     responseparse.cpp \
     send.cpp \
-    pkeywindow.cpp
+    pkeywindow.cpp \
+    qrcodegen.c \
+    showqr.cpp
 
 HEADERS += \
     aboutwindow.h \
@@ -59,7 +61,9 @@ HEADERS += \
     idwindow.h \
     responseparse.h \
     send.h \
-    pkeywindow.h
+    pkeywindow.h \
+    qrcodegen.h \
+    showqr.h
 
 FORMS += \
     aboutwindow.ui \
@@ -72,7 +76,8 @@ FORMS += \
     password.ui \
     idwindow.ui \
     send.ui \
-    pkeywindow.ui
+    pkeywindow.ui \
+    showqr.ui
 
 
 

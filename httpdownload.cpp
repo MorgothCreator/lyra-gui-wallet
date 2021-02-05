@@ -229,7 +229,6 @@ void httpDownload::startRequest(QUrl url) {
     if(progressDialog) {
         progressDialog->show();
     }
-//https://github-production-release-asset-2e65be.s3.amazonaws.com/274731863/f9b1e900-0aa5-11eb-98a8-9039778d56ff?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20201013%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20201013T120103Z&X-Amz-Expires=300&X-Amz-Signature=72be20ad204551e5bf9f4515b2dbe2a65ac4087b071c139c11239fdd633c0623&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=274731863&response-content-disposition=attachment%3B%20filename%3Dlyra.permissionless-1.7.8.0.tar.bz2&response-content-type=application%2Foctet-stream
     //finished = false;
     // get() method posts a request
     // to obtain the contents of the target request
