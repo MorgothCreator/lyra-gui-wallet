@@ -30,7 +30,7 @@ After first time you can open the wallet directly opening a terminal, navigating
 
 #### On MacOS 10.13 and up:
 
-There are issues in satisfying dependency's in order wallet to run ( If someone can fox this, please, you are welcome ), so there is a workaround installing Qt, downloading the Qt online installer <a href="https://www.qt.io/download-qt-installer?hsCtaTracking=99d9dd4f-5681-48d2-b096-470725510d34%7C074ddad0-fdef-4e53-8aa8-5e8a876d6ab4">QtOnlineInstaller.</a>, download it and fallow below instructions:
+There are issues in satisfying dependency's in order wallet to run ( If someone can fox this, please, you are welcome ), so there is a workaround installing Qt, downloading the <a href="https://www.qt.io/download-qt-installer?hsCtaTracking=99d9dd4f-5681-48d2-b096-470725510d34%7C074ddad0-fdef-4e53-8aa8-5e8a876d6ab4">QtOnlineInstaller.</a>, download it and fallow below instructions:
 
 ![LYRA GUY non official wallet](https://raw.githubusercontent.com/MorgothCreator/lyra-gui-wallet/master/QtOnMacOs.png)
 
